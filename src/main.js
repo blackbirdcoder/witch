@@ -3,6 +3,7 @@ import kaboom from 'kaboom';
 const settings = {
     color: { gold: [222, 158, 65], accent: [165, 48, 48], fill: [23, 32, 56] },
     font: 'PixelifySans-Regular',
+    ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     scene: {
         size: {
             width: 800,
@@ -15,8 +16,8 @@ const settings = {
     },
 };
 
-function Ingredient() {
-    this._nicknames = ['carrot', 'beetroot'];
+function Ingredient(settings) {
+    this._nicknames = settings.ingredientNames;
     this._collection = [];
     this.size = {
         width: 64,
@@ -127,6 +128,7 @@ function Player() {
             child: 30,
         },
     };
+    this._potion = 0;
 
     this.create = function (k) {
         k.loadSprite(this._nickname, `sprites/${this._nickname}.png`, this._cutting);
@@ -141,6 +143,33 @@ function Player() {
     this.turnStatusSwitch = function () {
         this.turnCorrectionStatus['right'] = !this.turnCorrectionStatus['right'];
         this.turnCorrectionStatus['left'] = !this.turnCorrectionStatus['left'];
+    };
+
+    this.makingPotions = function (recipe) {
+        const state = { potion: this._potion, reboot: false, newRecipe: false };
+        const collections = this.performer.children[0].collectedIngredients;
+        let precisionCounter = 0;
+        for (const keyRecipe of Object.keys(recipe)) {
+            if (collections[keyRecipe] === recipe[keyRecipe]) {
+                precisionCounter += 1;
+            } else if (collections[keyRecipe] > recipe[keyRecipe]) {
+                for (const key of Object.keys(collections)) {
+                    collections[key] = 0;
+                }
+                state['reboot'] = true;
+                return state;
+            }
+
+            if (precisionCounter === Object.keys(recipe).length) {
+                for (const key of Object.keys(collections)) {
+                    collections[key] = 0;
+                }
+                this._potion += 1;
+                state['newRecipe'] = true;
+                return state;
+            }
+        }
+        return state;
     };
 }
 
@@ -206,6 +235,49 @@ function ScreenStart(settings) {
     };
 }
 
+function UserInterface(settings) {
+    this._color = settings.color;
+    this._fontName = settings.font;
+    this.layer = null;
+    this._texts = [];
+
+    this.create = function (k) {
+        this.layer = k.add([k.fixed(), k.z(100)]);
+    };
+
+    this.createIngredientUI = function (k, recipe, ingredient, style) {
+        style['size'] = 20;
+        style['width'] = 200;
+        style['align'] = 'left';
+        let init = 30;
+        let step = 0;
+        for (const key of Object.keys(recipe)) {
+            this.layer.add([k.sprite(key), k.scale(0.4), k.pos(10, init * step)]);
+
+            const currentText = this.layer.add([
+                k.pos(40, (init + 1.2) * step),
+                k.text(`[gold]${ingredient[key]}/${recipe[key]}[/gold]`, style),
+            ]);
+
+            const tmp = {};
+            tmp[key] = currentText;
+            this._texts.push(tmp);
+
+            ++step;
+        }
+    };
+
+    this.refreshIngredientDisplay = function (ingredientName, collectedIngredients, recipe) {
+        for (const item of this._texts) {
+            if (Object.keys(item)[0] === ingredientName) {
+                item[
+                    ingredientName
+                ].text = `[gold]${collectedIngredients[ingredientName]}/${recipe[ingredientName]}[/gold]`;
+            }
+        }
+    };
+}
+
 (function main() {
     const k = kaboom({
         width: settings.scene.size.width,
@@ -216,6 +288,10 @@ function ScreenStart(settings) {
         background: settings.color.fill,
     });
     k.debug.inspect = false; // DEBUG!
+
+    const provideData = {
+        textStyle: null,
+    };
 
     k.scene('start', () => {
         const start = new ScreenStart(settings);
@@ -228,16 +304,15 @@ function ScreenStart(settings) {
             y: positionalText.y + start.pictureControlIdent.y,
         };
         const correctionSize = 0.7;
+        const textStyle = start.getColorText(k, fontMain);
+        provideData.textStyle = textStyle;
 
         k.add([
             k.sprite(pictureNames[0]),
             k.scale(start.scale),
             k.pos(positionalTitlePicture.x, positionalTitlePicture.y),
         ]);
-        k.add([
-            k.pos(positionalText.x, positionalText.y),
-            k.text(start.dialog['start'], start.getColorText(k, fontMain)),
-        ]);
+        k.add([k.pos(positionalText.x, positionalText.y), k.text(start.dialog['start'], textStyle)]);
         k.add([
             k.sprite(pictureNames[1]),
             k.pos(positionalControlPicture.x, positionalControlPicture.y),
@@ -260,10 +335,13 @@ function ScreenStart(settings) {
         k.setGravity(settings.scene.gravity);
         k.onKeyPress('r', () => k.go('main'));
 
-        const provideData = {
-            ground: {
-                colliderName: undefined,
-            },
+        const recipe = {
+            carrot: 2,
+            beetroot: 1,
+            acorn: 1,
+            amanita: 1,
+            onion: 1,
+            tooth: 1,
         };
 
         (function backgroundHandler() {
@@ -273,9 +351,10 @@ function ScreenStart(settings) {
         })();
 
         (function ingredientHandler() {
-            const ingredient = new Ingredient();
+            const ingredient = new Ingredient(settings);
             const ingredientNames = ingredient.create(k);
             const top = 2;
+
             k.loop(settings.scene.frequencySpawn, () => {
                 const currentIngredientName = ingredientNames[k.randi(ingredientNames.length)];
                 const activeIngredient = k.add([
@@ -293,10 +372,12 @@ function ScreenStart(settings) {
                         ),
                     }),
                     k.body({ gravityScale: ingredient.gravityScale }),
-                    currentIngredientName,
+                    {
+                        forename: currentIngredientName,
+                    },
                 ]);
 
-                activeIngredient.onCollide(provideData.ground.colliderName, () => {
+                activeIngredient.onCollide((other) => {
                     k.destroy(activeIngredient);
                 });
             });
@@ -314,13 +395,17 @@ function ScreenStart(settings) {
                     k.pos(step * groundBlockWidth, settings.scene.size.height - groundBlockWidth),
                     k.area(),
                     k.body({ isStatic: ground.isStatic }),
-                    groundName,
+                    {
+                        forename: groundName,
+                    },
                 ]);
             }
-            provideData.ground.colliderName = groundName;
         })();
 
-        (function PlayerHandler() {
+        const userInterface = new UserInterface(settings);
+        userInterface.create(k);
+        
+        (function playerHandler() {
             const player = new Player();
             const playerName = player.create(k);
             const playerInitPosition = player.calculateInitialPosition(
@@ -340,7 +425,9 @@ function ScreenStart(settings) {
                     ),
                 }),
                 k.body(player.body),
-                playerName,
+                {
+                    forename: playerName,
+                },
             ]);
 
             player.performer.add([
@@ -354,11 +441,48 @@ function ScreenStart(settings) {
                     offset: k.vec2(player.colliderAccessory.offset.x, 0),
                 }),
                 k.body({ isStatic: true }),
-                player.accessoryName,
+                {
+                    forename: player.accessoryName,
+                    collectedIngredients: {
+                        carrot: 0,
+                        beetroot: 0,
+                        acorn: 0,
+                        amanita: 0,
+                        onion: 0,
+                        tooth: 0,
+                    },
+                },
             ]);
 
-            // TODO: Continue
-            k.onCollide(player.accessoryName, 'carrot', () => {});
+            userInterface.createIngredientUI(
+                k,
+                recipe,
+                player.performer.children[0].collectedIngredients,
+                provideData.textStyle
+            );
+
+            player.performer.children[0].onCollide((other) => {
+                if (other.forename !== playerName) {
+                    player.performer.children[0].collectedIngredients[other.forename] += 1;
+                    const state = player.makingPotions(recipe);
+                    userInterface.refreshIngredientDisplay(
+                        other.forename,
+                        player.performer.children[0].collectedIngredients,
+                        recipe
+                    );
+                    if (state['reboot']) {
+                        k.destroy(userInterface.layer);
+                        userInterface.create(k);
+                        userInterface.createIngredientUI(
+                            k,
+                            recipe,
+                            player.performer.children[0].collectedIngredients,
+                            provideData.textStyle
+                        );
+                    }
+                    console.log(state);
+                }
+            });
 
             k.onKeyDown('left', () => {
                 player.performer.flipX = true;
