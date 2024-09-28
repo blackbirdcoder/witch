@@ -3,7 +3,10 @@ import kaboom from 'kaboom';
 const settings = {
     color: { gold: [222, 158, 65], accent: [165, 48, 48], fill: [23, 32, 56] },
     font: 'PixelifySans-Regular',
+    bottleName: 'bottle',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
+    amountIngredients: { min: 1, max: 2 }, // max 10
+    maxBottles: 10,
     scene: {
         size: {
             width: 800,
@@ -165,6 +168,7 @@ function Player() {
                     collections[key] = 0;
                 }
                 this._potion += 1;
+                state['potion'] = this._potion;
                 state['newRecipe'] = true;
                 return state;
             }
@@ -238,11 +242,18 @@ function ScreenStart(settings) {
 function UserInterface(settings) {
     this._color = settings.color;
     this._fontName = settings.font;
-    this.layer = null;
+    this.layerIngredientScale = null;
     this._texts = [];
+    this.layerBottlePoison = null;
+    this.bottlesCountText = null;
+    this._bottleName = settings.bottleName;
 
-    this.create = function (k) {
-        this.layer = k.add([k.fixed(), k.z(100)]);
+    this.createLayerIngredientScale = function (k) {
+        this.layerIngredientScale = k.add([k.fixed(), k.z(100)]);
+    };
+
+    this.createLayerBottlePoison = function (k) {
+        this.layerBottlePoison = k.add([k.fixed(), k.z(100)]);
     };
 
     this.createIngredientUI = function (k, recipe, ingredient, style) {
@@ -252,9 +263,9 @@ function UserInterface(settings) {
         let init = 30;
         let step = 0;
         for (const key of Object.keys(recipe)) {
-            this.layer.add([k.sprite(key), k.scale(0.4), k.pos(10, init * step)]);
+            this.layerIngredientScale.add([k.sprite(key), k.scale(0.4), k.pos(10, init * step)]);
 
-            const currentText = this.layer.add([
+            const currentText = this.layerIngredientScale.add([
                 k.pos(40, (init + 1.2) * step),
                 k.text(`[gold]${ingredient[key]}/${recipe[key]}[/gold]`, style),
             ]);
@@ -275,6 +286,38 @@ function UserInterface(settings) {
                 ].text = `[gold]${collectedIngredients[ingredientName]}/${recipe[ingredientName]}[/gold]`;
             }
         }
+    };
+
+    this.createBottlePoison = function (k) {
+        k.loadSprite(this._bottleName, `sprites/${this._bottleName}.png`);
+    };
+
+    this.createDisplayBottlePoisons = function (k, style) {
+        this.layerBottlePoison.add([k.sprite(this._bottleName), k.scale(0.8), k.pos(k.width() - 64 * 3, 50)]);
+        this.layerBottlePoison.add([k.text('[gold]x[/gold]', style), k.pos(k.width() - 150, 70)]);
+    };
+
+    this.createCountingBottlePoisons = function (k, bottlePoison, maxBottles, style) {
+        style['size'] = 30;
+        this.bottlesCountText = this.layerBottlePoison.add([
+            k.text(`[gold]${bottlePoison}/${maxBottles}[/gold]`, style),
+            k.pos(k.width() - 135, 67),
+        ]);
+    };
+}
+
+function Recipe(settings) {
+    this._ingredients = settings.ingredientNames;
+    this._recipe = {};
+
+    this.create = function (k) {
+        for (const ingredient of this._ingredients) {
+            this._recipe[ingredient] = k.randi(settings.amountIngredients.min, settings.amountIngredients.max + 1);
+        }
+    };
+
+    this.getRecipe = function () {
+        return this._recipe;
     };
 }
 
@@ -335,14 +378,9 @@ function UserInterface(settings) {
         k.setGravity(settings.scene.gravity);
         k.onKeyPress('r', () => k.go('main'));
 
-        const recipe = {
-            carrot: 2,
-            beetroot: 1,
-            acorn: 1,
-            amanita: 1,
-            onion: 1,
-            tooth: 1,
-        };
+        const poisonRecipe = new Recipe(settings);
+        poisonRecipe.create(k);
+        let recipe = poisonRecipe.getRecipe();
 
         (function backgroundHandler() {
             const background = new Background();
@@ -403,8 +441,10 @@ function UserInterface(settings) {
         })();
 
         const userInterface = new UserInterface(settings);
-        userInterface.create(k);
-        
+        userInterface.createLayerIngredientScale(k);
+        userInterface.createLayerBottlePoison(k);
+        userInterface.createBottlePoison(k);
+
         (function playerHandler() {
             const player = new Player();
             const playerName = player.create(k);
@@ -427,6 +467,7 @@ function UserInterface(settings) {
                 k.body(player.body),
                 {
                     forename: playerName,
+                    bottlePoison: 0,
                 },
             ]);
 
@@ -460,19 +501,27 @@ function UserInterface(settings) {
                 player.performer.children[0].collectedIngredients,
                 provideData.textStyle
             );
+            userInterface.createDisplayBottlePoisons(k, provideData.textStyle);
+            userInterface.createCountingBottlePoisons(
+                k,
+                player.performer.bottlePoison,
+                settings.maxBottles,
+                provideData.textStyle
+            );
 
             player.performer.children[0].onCollide((other) => {
                 if (other.forename !== playerName) {
                     player.performer.children[0].collectedIngredients[other.forename] += 1;
                     const state = player.makingPotions(recipe);
+                    player.performer.bottlePoison = state.potion;
                     userInterface.refreshIngredientDisplay(
                         other.forename,
                         player.performer.children[0].collectedIngredients,
                         recipe
                     );
                     if (state['reboot']) {
-                        k.destroy(userInterface.layer);
-                        userInterface.create(k);
+                        k.destroy(userInterface.layerIngredientScale);
+                        userInterface.createLayerIngredientScale(k);
                         userInterface.createIngredientUI(
                             k,
                             recipe,
@@ -480,7 +529,25 @@ function UserInterface(settings) {
                             provideData.textStyle
                         );
                     }
-                    console.log(state);
+                    if (state['newRecipe']) {
+                        k.destroy(userInterface.bottlesCountText);
+                        userInterface.createCountingBottlePoisons(
+                            k,
+                            player.performer.bottlePoison,
+                            settings.maxBottles,
+                            provideData.textStyle
+                        );
+                        poisonRecipe.create(k);
+                        recipe = poisonRecipe.getRecipe();
+                        k.destroy(userInterface.layerIngredientScale);
+                        userInterface.createLayerIngredientScale(k);
+                        userInterface.createIngredientUI(
+                            k,
+                            recipe,
+                            player.performer.children[0].collectedIngredients,
+                            provideData.textStyle
+                        );
+                    }
                 }
             });
 
