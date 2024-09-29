@@ -265,9 +265,18 @@ function UserInterface(settings) {
         },
     };
     this._locationZ = 100;
+    this.decreaseHealthBar = undefined;
+    this._size = {
+        width: 64,
+        height: 64,
+    };
+
+    this.calculationHealthBarReduction = function (damage) {
+        this.decreaseHealthBar = this.healthBarLength / damage;
+    };
 
     this.displaySkull = function (k) {
-        this._layerSkull.add([k.sprite(this._skullName), k.scale(0.8), k.pos(k.width() - 64 * 3, -5)]);
+        this._layerSkull.add([k.sprite(this._skullName), k.scale(0.8), k.pos(k.width() - this._size.width * 3, -5)]);
     };
 
     this.createLayerSkull = function (k) {
@@ -493,19 +502,22 @@ function Recipe(settings) {
             }
         })();
 
-        const userInterface = new UserInterface(settings);
-        userInterface.createLayerIngredientScale(k);
-        userInterface.createLayerBottlePoison(k);
-        userInterface.createBottlePoison(k);
-        userInterface.createSkull(k);
-        userInterface.createLayerSkull(k);
-        userInterface.displaySkull(k);
-        userInterface.drawHealthBarBackground(k);
-        let healthBarLength = userInterface.healthBarLength;
-        userInterface.drawHealthBarForeground(k, healthBarLength);
-        const numberDecreaseHealthBar = userInterface.healthBarLength / provideData.ingredientDamage;
+        const ui = (function userInterfaceHandler() {
+            const userInterface = new UserInterface(settings);
+            userInterface.createLayerIngredientScale(k);
+            userInterface.createLayerBottlePoison(k);
+            userInterface.createBottlePoison(k);
+            userInterface.createSkull(k);
+            userInterface.createLayerSkull(k);
+            userInterface.displaySkull(k);
+            userInterface.drawHealthBarBackground(k);
+            const healthBarLength = userInterface.healthBarLength;
+            userInterface.drawHealthBarForeground(k, healthBarLength);
+            userInterface.calculationHealthBarReduction(provideData.ingredientDamage);
+            return userInterface;
+        })();
 
-        (function playerHandler() {
+        (function playerHandler(ui) {
             const player = new Player();
             const playerName = player.create(k);
             const playerInitPosition = player.calculateInitialPosition(
@@ -556,14 +568,9 @@ function Recipe(settings) {
                 },
             ]);
 
-            userInterface.createIngredientUI(
-                k,
-                recipe,
-                player.performer.children[0].collectedIngredients,
-                provideData.textStyle
-            );
-            userInterface.displayBottlePoisons(k, provideData.textStyle);
-            userInterface.createCountingBottlePoisons(
+            ui.createIngredientUI(k, recipe, player.performer.children[0].collectedIngredients, provideData.textStyle);
+            ui.displayBottlePoisons(k, provideData.textStyle);
+            ui.createCountingBottlePoisons(
                 k,
                 player.performer.bottlePoison,
                 settings.maxBottles,
@@ -575,15 +582,15 @@ function Recipe(settings) {
                     player.performer.children[0].collectedIngredients[other.forename] += 1;
                     const state = player.makingPotions(recipe);
                     player.performer.bottlePoison = state.potion;
-                    userInterface.refreshIngredientDisplay(
+                    ui.refreshIngredientDisplay(
                         other.forename,
                         player.performer.children[0].collectedIngredients,
                         recipe
                     );
                     if (state['reboot']) {
-                        k.destroy(userInterface.layerIngredientScale);
-                        userInterface.createLayerIngredientScale(k);
-                        userInterface.createIngredientUI(
+                        k.destroy(ui.layerIngredientScale);
+                        ui.createLayerIngredientScale(k);
+                        ui.createIngredientUI(
                             k,
                             recipe,
                             player.performer.children[0].collectedIngredients,
@@ -591,8 +598,8 @@ function Recipe(settings) {
                         );
                     }
                     if (state['newRecipe']) {
-                        k.destroy(userInterface.bottlesCountText);
-                        userInterface.createCountingBottlePoisons(
+                        k.destroy(ui.bottlesCountText);
+                        ui.createCountingBottlePoisons(
                             k,
                             player.performer.bottlePoison,
                             settings.maxBottles,
@@ -600,9 +607,9 @@ function Recipe(settings) {
                         );
                         poisonRecipe.create(k);
                         recipe = poisonRecipe.getRecipe();
-                        k.destroy(userInterface.layerIngredientScale);
-                        userInterface.createLayerIngredientScale(k);
-                        userInterface.createIngredientUI(
+                        k.destroy(ui.layerIngredientScale);
+                        ui.createLayerIngredientScale(k);
+                        ui.createIngredientUI(
                             k,
                             recipe,
                             player.performer.children[0].collectedIngredients,
@@ -615,8 +622,8 @@ function Recipe(settings) {
             player.performer.onCollide((other) => {
                 if (other.forename != provideData.ground) {
                     player.performer.hurt(provideData.ingredientDamage);
-                    k.destroy(userInterface.healthBarForeground);
-                    userInterface.drawHealthBarForeground(k, (healthBarLength -= numberDecreaseHealthBar));
+                    k.destroy(ui.healthBarForeground);
+                    ui.drawHealthBarForeground(k, (ui.healthBarLength -= ui.decreaseHealthBar));
                 }
             });
 
@@ -675,6 +682,6 @@ function Recipe(settings) {
                     }
                 });
             });
-        })();
+        })(ui);
     });
 })();
