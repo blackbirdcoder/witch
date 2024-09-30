@@ -7,7 +7,7 @@ const settings = {
     skullName: 'skull',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     amountIngredients: { min: 1, max: 2 }, // max 10
-    maxBottles: 10,
+    maxBottles: 1, // max 10
     scene: {
         size: {
             width: 800,
@@ -517,6 +517,7 @@ function Recipe(settings) {
             return userInterface;
         })();
 
+        // TODO: Implementation branch Player Win
         (function playerHandler(ui) {
             const player = new Player();
             const playerName = player.create(k);
@@ -615,6 +616,10 @@ function Recipe(settings) {
                             player.performer.children[0].collectedIngredients,
                             provideData.textStyle
                         );
+                        
+                        if (player.performer.bottlePoison === settings.maxBottles) {
+                            console.log('YOU WIN');
+                        }
                     }
                 }
             });
