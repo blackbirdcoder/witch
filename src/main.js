@@ -1,7 +1,12 @@
 import kaboom from 'kaboom';
 
 const settings = {
-    color: { gold: [222, 158, 65], accent: [165, 48, 48], fill: [23, 32, 56], life: [117, 167, 67] },
+    color: {
+        gold: [222, 158, 65],
+        accent: [165, 48, 48],
+        fill: [23, 32, 56],
+        life: [117, 167, 67],
+    },
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
     skullName: 'skull',
@@ -54,6 +59,7 @@ function Ground() {
         height: 64,
     };
     this.isStatic = true;
+    this._locationZ = -10;
 
     this.create = function (k) {
         k.loadSprite(this._nickname, `sprites/${this._nickname}.png`);
@@ -63,6 +69,20 @@ function Ground() {
     this.calculateSpan = function (sceneLength) {
         this._span = Math.ceil(sceneLength / this.size.width);
         return this._span;
+    };
+
+    this.helperPlatform = function (k, bgColor, tag) {
+        k.add([
+            k.pos(0, k.height() - this.size.height),
+            k.rect(k.width(), this.size.width),
+            k.color(bgColor),
+            k.area(),
+            k.body({ isStatic: true }),
+            k.z(this._locationZ),
+            {
+                forename: tag,
+            },
+        ]);
     };
 }
 
@@ -146,6 +166,7 @@ function Player() {
         this._initialPosition.y = sceneHeight - this._size.height * 3;
         return this._initialPosition;
     };
+
     this.turnStatusSwitch = function () {
         this.turnCorrectionStatus['right'] = !this.turnCorrectionStatus['right'];
         this.turnCorrectionStatus['left'] = !this.turnCorrectionStatus['left'];
@@ -386,6 +407,7 @@ function Recipe(settings) {
         scale: settings.scene.scale,
         global: false,
         background: settings.color.fill,
+        // maxFPS: 30,
     });
     k.debug.inspect = false; // DEBUG!
 
@@ -487,6 +509,7 @@ function Recipe(settings) {
             const numberGroundBlocks = ground.calculateSpan(settings.scene.size.width);
             const groundBlockWidth = ground.size.width;
 
+            ground.helperPlatform(k, settings.color.fill, groundName);
             provideData.ground = groundName;
 
             for (let step = 0; step < numberGroundBlocks; step++) {
@@ -517,7 +540,7 @@ function Recipe(settings) {
             return userInterface;
         })();
 
-        // TODO: Implementation branch Player Win
+
         (function playerHandler(ui) {
             const player = new Player();
             const playerName = player.create(k);
@@ -616,7 +639,7 @@ function Recipe(settings) {
                             player.performer.children[0].collectedIngredients,
                             provideData.textStyle
                         );
-                        
+
                         if (player.performer.bottlePoison === settings.maxBottles) {
                             console.log('YOU WIN');
                         }
