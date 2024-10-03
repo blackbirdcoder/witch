@@ -424,7 +424,7 @@ function Notifier() {
         style['width'] = 700;
         k.add([
             k.pos(150, 450),
-            k.text(`[gold]To start the game again, press[/gold] [accent]${keyChar}[/accent]`, style),
+            k.text(`[gold]To start the game again. Press[/gold] [accent]${keyChar}[/accent]`, style),
         ]);
     };
 }
