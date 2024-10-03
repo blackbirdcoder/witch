@@ -10,6 +10,8 @@ const settings = {
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
     skullName: 'skull',
+    winnerName: 'winner',
+    loserName: 'loser',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     amountIngredients: { min: 1, max: 2 }, // max 10
     maxBottles: 1, // max 10
@@ -291,6 +293,13 @@ function UserInterface(settings) {
         width: 64,
         height: 64,
     };
+    this.winner = settings.winnerName;
+    this.loser = settings.loserName;
+
+    this.createImageSessionResult = function (k) {
+        k.loadSprite(this.winner, `sprites/${this.winner}.png`);
+        k.loadSprite(this.loser, `sprites/${this.loser}.png`);
+    };
 
     this.calculationHealthBarReduction = function (damage) {
         this.decreaseHealthBar = this.healthBarLength / damage;
@@ -396,6 +405,27 @@ function Recipe(settings) {
 
     this.getRecipe = function () {
         return this._recipe;
+    };
+}
+
+function Notifier() {
+    this.displayText = function (k, msg, style) {
+        style['size'] = 60;
+        style['width'] = 350;
+        k.add([k.pos(250, 50), k.text(msg, style)]);
+    };
+
+    this.displayImage = function (k, imageName) {
+        k.add([k.sprite(imageName), k.pos((k.width() - 256) / 2, 160), k.scale(4)]);
+    };
+
+    this.playOverText = function (k, keyChar, style) {
+        style['size'] = 30;
+        style['width'] = 700;
+        k.add([
+            k.pos(150, 450),
+            k.text(`[gold]To start the game again, press[/gold] [accent]${keyChar}[/accent]`, style),
+        ]);
     };
 }
 
@@ -537,9 +567,9 @@ function Recipe(settings) {
             const healthBarLength = userInterface.healthBarLength;
             userInterface.drawHealthBarForeground(k, healthBarLength);
             userInterface.calculationHealthBarReduction(provideData.ingredientDamage);
+            userInterface.createImageSessionResult(k);
             return userInterface;
         })();
-
 
         (function playerHandler(ui) {
             const player = new Player();
@@ -641,7 +671,7 @@ function Recipe(settings) {
                         );
 
                         if (player.performer.bottlePoison === settings.maxBottles) {
-                            console.log('YOU WIN');
+                            k.go('inform', '[gold]You Winner[/gold]', ui.winner);
                         }
                     }
                 }
@@ -656,7 +686,7 @@ function Recipe(settings) {
             });
 
             player.performer.onDeath(() => {
-                console.log('GAME OVER');
+                k.go('inform', '[accent]Game Over[/accent]', ui.loser);
             });
 
             k.onKeyDown('left', () => {
@@ -711,5 +741,13 @@ function Recipe(settings) {
                 });
             });
         })(ui);
+    });
+
+    k.scene('inform', (msg, img) => {
+        k.onKeyPress('r', () => k.go('main'));
+        const notifier = new Notifier();
+        notifier.displayText(k, msg, provideData.textStyle);
+        notifier.displayImage(k, img);
+        notifier.playOverText(k, 'R', provideData.textStyle);
     });
 })();
