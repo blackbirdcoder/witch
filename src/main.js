@@ -689,21 +689,21 @@ function Notifier() {
                 k.go('inform', '[accent]Game Over[/accent]', ui.loser);
             });
 
-            k.onKeyDown('left', () => {
+            player.performer.onKeyDown('left', () => {
                 player.performer.flipX = true;
                 player.performer.move(-player.speed, 0);
                 player.performer.area.shape.pos.x = player.turnColliderRelocation.left.parent;
                 player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
             });
 
-            k.onKeyDown('right', () => {
+            player.performer.onKeyDown('right', () => {
                 player.performer.flipX = false;
                 player.performer.move(player.speed, 0);
                 player.performer.area.shape.pos.x = player.turnColliderRelocation.right.parent;
                 player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
             });
 
-            k.onKeyPress('space', () => {
+            player.performer.onKeyPress('space', () => {
                 if (player.performer.isGrounded()) {
                     player.performer.jump();
                 }
@@ -711,11 +711,11 @@ function Notifier() {
 
             ['left', 'right', 'space'].forEach((key) => {
                 if (key == 'space') {
-                    k.onKeyPress(key, () => {
+                    player.performer.onKeyPress(key, () => {
                         player.performer.play('jump');
                     });
                 } else if (key == 'right') {
-                    k.onKeyPress(key, () => {
+                    player.performer.onKeyPress(key, () => {
                         player.performer.play('run');
 
                         if (player.turnCorrectionStatus[key]) {
@@ -724,7 +724,7 @@ function Notifier() {
                         }
                     });
                 } else if (key == 'left') {
-                    k.onKeyPress(key, () => {
+                    player.performer.onKeyPress(key, () => {
                         player.performer.play('run');
 
                         if (player.turnCorrectionStatus[key]) {
@@ -735,7 +735,7 @@ function Notifier() {
                 }
             });
 
-            k.onKeyRelease(() => {
+            player.performer.onKeyRelease(() => {
                 if (!k.isKeyDown('left') && !k.isKeyDown('right') && !k.isKeyDown('space')) {
                     player.performer.play('idle');
                 } else if (k.isKeyDown('right') || k.isKeyDown('left')) {
@@ -745,7 +745,7 @@ function Notifier() {
                 }
             });
 
-            k.onUpdate(() => {
+            player.performer.onUpdate(() => {
                 if (
                     (k.isKeyDown('right') &&
                         k.isKeyDown('space') &&
