@@ -718,7 +718,7 @@ function Notifier() {
                     k.onKeyPress(key, () => {
                         player.performer.play('run');
 
-                        if (player.turnCorrectionStatus['right']) {
+                        if (player.turnCorrectionStatus[key]) {
                             player.performer.pos.x = player.performer.pos.x + player.performer.width;
                             player.turnStatusSwitch();
                         }
@@ -727,18 +727,37 @@ function Notifier() {
                     k.onKeyPress(key, () => {
                         player.performer.play('run');
 
-                        if (player.turnCorrectionStatus['left']) {
+                        if (player.turnCorrectionStatus[key]) {
                             player.performer.pos.x = player.performer.pos.x - player.performer.width;
                             player.turnStatusSwitch();
                         }
                     });
                 }
+            });
 
-                k.onKeyRelease(key, () => {
-                    if (!k.isKeyDown('left') && !k.isKeyDown('right') && !k.isKeyDown('space')) {
-                        player.performer.play('idle');
-                    }
-                });
+            k.onKeyRelease(() => {
+                if (!k.isKeyDown('left') && !k.isKeyDown('right') && !k.isKeyDown('space')) {
+                    player.performer.play('idle');
+                } else if (k.isKeyDown('right') || k.isKeyDown('left')) {
+                    player.performer.play('run');
+                } else if (k.isKeyDown('space') && player.performer.isGrounded()) {
+                    player.performer.play('idle');
+                }
+            });
+
+            k.onUpdate(() => {
+                if (
+                    (k.isKeyDown('right') &&
+                        k.isKeyDown('space') &&
+                        player.performer.isGrounded() &&
+                        player.performer.curAnim() !== 'run') ||
+                    (k.isKeyDown('left') &&
+                        k.isKeyDown('space') &&
+                        player.performer.isGrounded() &&
+                        player.performer.curAnim() !== 'run')
+                ) {
+                    player.performer.play('run');
+                }
             });
         })(ui);
     });
