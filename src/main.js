@@ -157,6 +157,10 @@ function Player() {
         },
     };
     this._potion = 0;
+    this._restrictMove = {
+        left: undefined,
+        right: undefined,
+    };
 
     this.create = function (k) {
         k.loadSprite(this._nickname, `sprites/${this._nickname}.png`, this._cutting);
@@ -200,6 +204,13 @@ function Player() {
             }
         }
         return state;
+    };
+
+    this.calculateRestrict = function (sceneWidth) {
+        const cleanLook = 16;
+        this._restrictMove.right = sceneWidth - (this._size.width * this.scale - cleanLook);
+        this._restrictMove.left = sceneWidth - (sceneWidth + cleanLook);
+        return this._restrictMove;
     };
 }
 
@@ -574,11 +585,12 @@ function Notifier() {
         (function playerHandler(ui) {
             const player = new Player();
             const playerName = player.create(k);
+            const playerRestrictMove = player.calculateRestrict(settings.scene.size.width);
             const playerInitPosition = player.calculateInitialPosition(
                 settings.scene.size.width,
                 settings.scene.size.height
             );
-
+            console.log(playerRestrictMove);
             player.performer = k.add([
                 k.sprite(playerName, { anim: 'idle' }),
                 k.scale(player.scale),
@@ -690,17 +702,21 @@ function Notifier() {
             });
 
             player.performer.onKeyDown('left', () => {
-                player.performer.flipX = true;
-                player.performer.move(-player.speed, 0);
-                player.performer.area.shape.pos.x = player.turnColliderRelocation.left.parent;
-                player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
+                if (player.performer.pos.x > playerRestrictMove.left) {
+                    player.performer.flipX = true;
+                    player.performer.move(-player.speed, 0);
+                    player.performer.area.shape.pos.x = player.turnColliderRelocation.left.parent;
+                    player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
+                }
             });
 
             player.performer.onKeyDown('right', () => {
                 player.performer.flipX = false;
-                player.performer.move(player.speed, 0);
-                player.performer.area.shape.pos.x = player.turnColliderRelocation.right.parent;
-                player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
+                if (player.performer.pos.x < playerRestrictMove.right) {
+                    player.performer.move(player.speed, 0);
+                    player.performer.area.shape.pos.x = player.turnColliderRelocation.right.parent;
+                    player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
+                }
             });
 
             player.performer.onKeyPress('space', () => {
@@ -757,6 +773,13 @@ function Notifier() {
                         player.performer.curAnim() !== 'run')
                 ) {
                     player.performer.play('run');
+                }
+
+                if (
+                    (player.performer.pos.x > playerRestrictMove.right && player.performer.curAnim() !== 'idle') ||
+                    (player.performer.pos.x < playerRestrictMove.left && player.performer.curAnim() !== 'idle')
+                ) {
+                    player.performer.play('idle');
                 }
             });
         })(ui);
