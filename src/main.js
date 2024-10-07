@@ -12,9 +12,11 @@ const settings = {
     skullName: 'skull',
     winnerName: 'winner',
     loserName: 'loser',
+    bonusName: 'bonus',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     amountIngredients: { min: 1, max: 2 }, // max 10
     maxBottles: 1, // max 10
+    bonusSpawnTime: 4, // 60
     scene: {
         size: {
             width: 800,
@@ -113,6 +115,7 @@ function Player() {
         jumpForce: 800,
     };
     this.speed = 100;
+    this.maxSpeed = this.speed * 2;
     this._cutting = {
         sliceX: 6,
         sliceY: 3,
@@ -440,6 +443,39 @@ function Notifier() {
     };
 }
 
+function Bonus(settings) {
+    this._bonusName = settings.bonusName;
+    this.avatar = null;
+    this.performer = null;
+    this.numbersRandomPosition = {
+        from: 64,
+        to: 700,
+    };
+    this.spawnTime = settings.bonusSpawnTime;
+    this.colliderSetting = {
+        position: {
+            x: 15,
+            y: 15,
+        },
+        size: {
+            width: 32,
+            height: 30,
+        },
+    };
+    this.isStatic = true;
+    this.scale = 1;
+    this.locationZ = 1;
+    this.distanceToGround = 472;
+
+    this.create = function (k) {
+        this.avatar = k.loadSprite(this._bonusName, `sprites/${this._bonusName}.png`);
+    };
+
+    this.getName = function () {
+        return this._bonusName;
+    };
+}
+
 (function main() {
     const k = kaboom({
         width: settings.scene.size.width,
@@ -456,6 +492,13 @@ function Notifier() {
         textStyle: null,
         ground: undefined,
         ingredientDamage: undefined,
+        bonusName: undefined,
+        bonusSpawnTime: undefined,
+        playerName: undefined,
+        playerPositionRange: {
+            start: 0,
+            end: 0,
+        },
     };
 
     k.scene('start', () => {
@@ -503,6 +546,59 @@ function Notifier() {
         const poisonRecipe = new Recipe(settings);
         poisonRecipe.create(k);
         let recipe = poisonRecipe.getRecipe();
+
+        (function bonusHandler() {
+            const bonus = new Bonus(settings);
+            bonus.create(k);
+            const bonusName = bonus.getName();
+            provideData.bonusName = bonusName;
+            provideData.bonusSpawnTime = bonus.spawnTime;
+
+            (function buildBonus(spawnTime) {
+                k.wait(spawnTime, () => {
+                    const numberRandomPositionX = k.randi(
+                        bonus.numbersRandomPosition.from,
+                        bonus.numbersRandomPosition.to + 1
+                    );
+                    const start = provideData.playerPositionRange.start;
+                    const end = provideData.playerPositionRange.end;
+                    const max = Math.max(start, end);
+                    const min = Math.min(start, end);
+
+                    const isRange = min <= numberRandomPositionX && numberRandomPositionX <= max;
+
+                    if (!isRange) {
+                        bonus.performer = k.add([
+                            k.sprite(bonus.avatar),
+                            k.area({
+                                shape: new k.Rect(
+                                    k.vec2(bonus.colliderSetting.position.x, bonus.colliderSetting.position.y),
+                                    bonus.colliderSetting.size.width,
+                                    bonus.colliderSetting.size.height
+                                ),
+                            }),
+                            k.body({ isStatic: bonus.isStatic }),
+                            k.scale(bonus.scale),
+                            k.z(bonus.locationZ),
+                            k.timer(),
+                            k.pos(numberRandomPositionX, bonus.distanceToGround),
+                            {
+                                forename: bonusName,
+                            },
+                        ]);
+
+                        bonus.performer.onCollide((other) => {
+                            if (other.forename === provideData.playerName) {
+                                k.destroy(bonus.performer);
+                                buildBonus(bonus.spawnTime);
+                            }
+                        });
+                    } else {
+                        buildBonus(bonus.spawnTime);
+                    }
+                });
+            })(bonus.spawnTime);
+        })();
 
         (function backgroundHandler() {
             const background = new Background();
@@ -590,11 +686,13 @@ function Notifier() {
                 settings.scene.size.width,
                 settings.scene.size.height
             );
-            console.log(playerRestrictMove);
+            provideData.playerName = playerName;
+
             player.performer = k.add([
                 k.sprite(playerName, { anim: 'idle' }),
                 k.scale(player.scale),
                 k.pos(playerInitPosition.x, playerInitPosition.y),
+                k.timer(),
                 k.area({
                     shape: new k.Rect(
                         k.vec2(player.colliderPlayer.pos.x, player.colliderPlayer.pos.y),
@@ -690,7 +788,17 @@ function Notifier() {
             });
 
             player.performer.onCollide((other) => {
-                if (other.forename != provideData.ground) {
+                if (other.forename === provideData.bonusName) {
+                    if (player.speed !== player.maxSpeed) {
+                        const NumberDivisor = 2;
+                        player.speed = player.maxSpeed;
+                        player.performer.wait(provideData.bonusSpawnTime / NumberDivisor, () => {
+                            player.speed = player.speed / NumberDivisor;
+                        });
+                    }
+                }
+
+                if (other.forename != provideData.ground && other.forename != provideData.bonusName) {
                     player.performer.hurt(provideData.ingredientDamage);
                     k.destroy(ui.healthBarForeground);
                     ui.drawHealthBarForeground(k, (ui.healthBarLength -= ui.decreaseHealthBar));
@@ -703,6 +811,8 @@ function Notifier() {
 
             player.performer.onKeyDown('left', () => {
                 if (player.performer.pos.x > playerRestrictMove.left) {
+                    provideData.playerPositionRange.start = Math.ceil(player.performer.pos.x) + 100;
+                    provideData.playerPositionRange.end = Math.ceil(player.performer.pos.x) - 100;
                     player.performer.flipX = true;
                     player.performer.move(-player.speed, 0);
                     player.performer.area.shape.pos.x = player.turnColliderRelocation.left.parent;
@@ -713,6 +823,8 @@ function Notifier() {
             player.performer.onKeyDown('right', () => {
                 player.performer.flipX = false;
                 if (player.performer.pos.x < playerRestrictMove.right) {
+                    provideData.playerPositionRange.start = Math.ceil(player.performer.pos.x) - 100;
+                    provideData.playerPositionRange.end = Math.ceil(player.performer.pos.x) + 100;
                     player.performer.move(player.speed, 0);
                     player.performer.area.shape.pos.x = player.turnColliderRelocation.right.parent;
                     player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
