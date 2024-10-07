@@ -6,6 +6,7 @@ const settings = {
         accent: [165, 48, 48],
         fill: [23, 32, 56],
         life: [117, 167, 67],
+        dust: [87, 114, 119],
     },
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
@@ -476,6 +477,26 @@ function Bonus(settings) {
     };
 }
 
+function SpecialEffect(settings) {
+    this.dustName = 'dust';
+    this.createDust = function (k, position, direction) {
+        k.add([
+            k.pos(position),
+            k.rect(7, 7),
+            k.color(settings.color.dust),
+            k.anchor('center'),
+            k.scale(k.rand(0.3, 0.6)),
+            k.opacity(0.2),
+            k.area(),
+            k.lifespan(0.2, { fade: 0.1 }),
+            k.move(direction, k.rand(60, 120)),
+            {
+                forename: this.dustName,
+            },
+        ]);
+    };
+}
+
 (function main() {
     const k = kaboom({
         width: settings.scene.size.width,
@@ -499,6 +520,7 @@ function Bonus(settings) {
             start: 0,
             end: 0,
         },
+        dustName: undefined,
     };
 
     k.scene('start', () => {
@@ -547,6 +569,9 @@ function Bonus(settings) {
         poisonRecipe.create(k);
         let recipe = poisonRecipe.getRecipe();
 
+        const specialEffect = new SpecialEffect(settings);
+        provideData.dustName = specialEffect.dustName;
+
         (function bonusHandler() {
             const bonus = new Bonus(settings);
             bonus.create(k);
@@ -580,7 +605,7 @@ function Bonus(settings) {
                             k.body({ isStatic: bonus.isStatic }),
                             k.scale(bonus.scale),
                             k.z(bonus.locationZ),
-                            k.timer(),
+                            // k.timer(),
                             k.pos(numberRandomPositionX, bonus.distanceToGround),
                             {
                                 forename: bonusName,
@@ -678,7 +703,7 @@ function Bonus(settings) {
             return userInterface;
         })();
 
-        (function playerHandler(ui) {
+        (function playerHandler(ui, se) {
             const player = new Player();
             const playerName = player.create(k);
             const playerRestrictMove = player.calculateRestrict(settings.scene.size.width);
@@ -798,7 +823,11 @@ function Bonus(settings) {
                     }
                 }
 
-                if (other.forename != provideData.ground && other.forename != provideData.bonusName) {
+                if (
+                    other.forename != provideData.ground &&
+                    other.forename != provideData.bonusName &&
+                    other.forename != provideData.dustName
+                ) {
                     player.performer.hurt(provideData.ingredientDamage);
                     k.destroy(ui.healthBarForeground);
                     ui.drawHealthBarForeground(k, (ui.healthBarLength -= ui.decreaseHealthBar));
@@ -817,6 +846,10 @@ function Bonus(settings) {
                     player.performer.move(-player.speed, 0);
                     player.performer.area.shape.pos.x = player.turnColliderRelocation.left.parent;
                     player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
+                    if (player.performer.isGrounded()) {
+                        se.createDust(k, player.performer.pos.add(87, k.rand(125, 130)), k.RIGHT);
+                        se.createDust(k, player.performer.pos.add(100, k.rand(123, 129)), k.RIGHT);
+                    }
                 }
             });
 
@@ -828,6 +861,10 @@ function Bonus(settings) {
                     player.performer.move(player.speed, 0);
                     player.performer.area.shape.pos.x = player.turnColliderRelocation.right.parent;
                     player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
+                    if (player.performer.isGrounded()) {
+                        se.createDust(k, player.performer.pos.add(31, k.rand(125, 130)), k.LEFT);
+                        se.createDust(k, player.performer.pos.add(40, k.rand(123, 129)), k.LEFT);
+                    }
                 }
             });
 
@@ -894,7 +931,7 @@ function Bonus(settings) {
                     player.performer.play('idle');
                 }
             });
-        })(ui);
+        })(ui, specialEffect);
     });
 
     k.scene('inform', (msg, img) => {
