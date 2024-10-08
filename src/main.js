@@ -479,6 +479,8 @@ function Bonus(settings) {
 
 function SpecialEffect(settings) {
     this.dustName = 'dust';
+    this.starsName = 'star';
+
     this.createDust = function (k, position, direction) {
         k.add([
             k.pos(position),
@@ -494,6 +496,27 @@ function SpecialEffect(settings) {
                 forename: this.dustName,
             },
         ]);
+    };
+
+    this.createStart = function (k, position) {
+        const directions = [k.LEFT, k.UP, k.RIGHT, k.DOWN, k.vec2(1, 1), k.vec2(-1, -1), k.vec2(1, -1), k.vec2(-1, 1)];
+        for (let i = 0; i < directions.length; i++) {
+            k.add([
+                k.pos(position),
+                k.rect(8, 8),
+                k.color(222, 158, 65),
+                k.anchor('center'),
+                k.scale(k.rand(0.4, 0.6)),
+                k.opacity(0.7),
+                k.area(),
+                k.lifespan(0.2, { fade: 0.1 }),
+                k.move(directions[i], k.rand(90, 100)),
+                k.rotate(k.rand(-360, 360)),
+                {
+                    forename: this.starsName,
+                },
+            ]);
+        }
     };
 }
 
@@ -521,6 +544,7 @@ function SpecialEffect(settings) {
             end: 0,
         },
         dustName: undefined,
+        starName: undefined,
     };
 
     k.scene('start', () => {
@@ -571,6 +595,7 @@ function SpecialEffect(settings) {
 
         const specialEffect = new SpecialEffect(settings);
         provideData.dustName = specialEffect.dustName;
+        provideData.starName = specialEffect.starsName;
 
         (function bonusHandler() {
             const bonus = new Bonus(settings);
@@ -826,11 +851,16 @@ function SpecialEffect(settings) {
                 if (
                     other.forename != provideData.ground &&
                     other.forename != provideData.bonusName &&
-                    other.forename != provideData.dustName
+                    other.forename != provideData.dustName &&
+                    other.forename != provideData.starName
                 ) {
                     player.performer.hurt(provideData.ingredientDamage);
                     k.destroy(ui.healthBarForeground);
                     ui.drawHealthBarForeground(k, (ui.healthBarLength -= ui.decreaseHealthBar));
+
+                    let position = k.vec2(88, 15);
+                    if (!player.performer.flipX) position.x = position.x / 2;
+                    se.createStart(k, player.performer.pos.add(position));
                 }
             });
 
