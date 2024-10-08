@@ -7,6 +7,7 @@ const settings = {
         fill: [23, 32, 56],
         life: [117, 167, 67],
         dust: [87, 114, 119],
+        hit: [222, 158, 65],
     },
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
@@ -504,7 +505,7 @@ function SpecialEffect(settings) {
             k.add([
                 k.pos(position),
                 k.rect(8, 8),
-                k.color(222, 158, 65),
+                k.color(settings.color.hit),
                 k.anchor('center'),
                 k.scale(k.rand(0.4, 0.6)),
                 k.opacity(0.7),
