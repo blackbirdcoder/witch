@@ -490,7 +490,6 @@ function SpecialEffect(settings) {
             k.anchor('center'),
             k.scale(k.rand(0.3, 0.6)),
             k.opacity(0.2),
-            k.area(),
             k.lifespan(0.2, { fade: 0.1 }),
             k.move(direction, k.rand(60, 120)),
             {
@@ -509,7 +508,6 @@ function SpecialEffect(settings) {
                 k.anchor('center'),
                 k.scale(k.rand(0.4, 0.6)),
                 k.opacity(0.7),
-                k.area(),
                 k.lifespan(0.2, { fade: 0.1 }),
                 k.move(directions[i], k.rand(90, 100)),
                 k.rotate(k.rand(-360, 360)),
@@ -631,7 +629,6 @@ function SpecialEffect(settings) {
                             k.body({ isStatic: bonus.isStatic }),
                             k.scale(bonus.scale),
                             k.z(bonus.locationZ),
-                            // k.timer(),
                             k.pos(numberRandomPositionX, bonus.distanceToGround),
                             {
                                 forename: bonusName,
