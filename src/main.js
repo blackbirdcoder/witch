@@ -8,6 +8,8 @@ const settings = {
         life: [117, 167, 67],
         dust: [87, 114, 119],
         hit: [222, 158, 65],
+        mask: [255, 255, 255],
+        effect: [207, 87, 60],
     },
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
@@ -321,10 +323,6 @@ function UserInterface(settings) {
         this.decreaseHealthBar = this.healthBarLength / damage;
     };
 
-    this.displaySkull = function (k) {
-        this._layerSkull.add([k.sprite(this._skullName), k.scale(0.8), k.pos(k.width() - this._size.width * 3, -5)]);
-    };
-
     this.createLayerSkull = function (k) {
         this._layerSkull = k.add([k.fixed(), k.z(this._locationZ)]);
     };
@@ -335,6 +333,15 @@ function UserInterface(settings) {
 
     this.createLayerBottlePoison = function (k) {
         this.layerBottlePoison = k.add([k.fixed(), k.z(this._locationZ)]);
+    };
+
+    this.displaySkull = function (k, color = this._color.mask) {
+        this._layerSkull.add([
+            k.sprite(this._skullName),
+            k.scale(0.8),
+            k.pos(k.width() - this._size.width * 3, -5),
+            k.color(color),
+        ]);
     };
 
     this.drawHealthBarBackground = function (k) {
@@ -406,6 +413,16 @@ function UserInterface(settings) {
             k.text(`[gold]${bottlePoison}/${maxBottles}[/gold]`, style),
             k.pos(k.width() - 135, 67),
         ]);
+    };
+
+    this.getSkull = function () {
+        return this._layerSkull;
+    };
+
+    this.redrawSkull = function (k, color = this._color.mask) {
+        k.destroy(this._layerSkull);
+        this.createLayerSkull(k);
+        this.displaySkull(k, color);
     };
 }
 
@@ -838,9 +855,12 @@ function SpecialEffect(settings) {
             player.performer.onCollide((other) => {
                 if (other.forename === provideData.bonusName) {
                     if (player.speed !== player.maxSpeed) {
+                        ui.redrawSkull(k, settings.color.effect);
                         const NumberDivisor = 2;
                         player.speed = player.maxSpeed;
+
                         player.performer.wait(provideData.bonusSpawnTime / NumberDivisor, () => {
+                            ui.redrawSkull(k);
                             player.speed = player.speed / NumberDivisor;
                         });
                     }
