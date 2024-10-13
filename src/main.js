@@ -536,6 +536,67 @@ function SpecialEffect(settings) {
     };
 }
 
+function Enemy(k) {
+    this.tag = 'enemy';
+    this.sprite = null;
+    this.gameObject = null;
+    this.pointsSpawn = [-70, 850];
+    this.speed = 220;
+    this.dir = 1;
+    this.currentPoint = undefined;
+
+    this.createSprite = function () {
+        this.sprite = k.loadSprite(this.tag, `sprites/${this.tag}.png`, {
+            sliceX: 6,
+            anims: {
+                run: {
+                    from: 0,
+                    to: 5,
+                    loop: true,
+                    speed: 12,
+                },
+            },
+        });
+    };
+
+    this.spawn = function () {
+        this.currentPoint = this.pointsSpawn[k.randi(0, 2)];
+        this.gameObject = k.add([
+            k.sprite(this.sprite, { anim: 'run' }),
+            k.pos(this.currentPoint, 473),
+            k.area({ shape: new k.Rect(k.vec2(20, 44), 32, 20), collisionIgnore: ['ground', 'bonus'] }),
+            k.offscreen({ hide: true, distance: 50 }),
+            k.opacity(0),
+            k.z(100),
+            {
+                forename: this.tag,
+            },
+        ]);
+    };
+
+    this.move = function () {
+        const period = k.randi(4, 9);
+        k.wait(period, () => {
+            this.gameObject.opacity = 1;
+            dir = this.currentPoint > 400 ? -1 : 1;
+            this.gameObject.flipX = dir < 0 ? true : false;
+
+            this.gameObject.onUpdate(() => {
+                if (
+                    (dir < 0 && Math.ceil(this.gameObject.pos.x) > Math.min(...this.pointsSpawn)) ||
+                    (dir > 0 && Math.ceil(this.gameObject.pos.x) < Math.max(...this.pointsSpawn))
+                ) {
+                    this.gameObject.move(this.speed * dir, 0);
+                } else {
+                    this.gameObject.destroy();
+                    this.spawn();
+                    this.move();
+                }
+            });
+        });
+    };
+}
+
 (function main() {
     const k = kaboom({
         width: settings.scene.size.width,
@@ -613,6 +674,11 @@ function SpecialEffect(settings) {
         provideData.dustName = specialEffect.dustName;
         provideData.starName = specialEffect.starsName;
 
+        const enemy = new Enemy(k);
+        enemy.createSprite();
+        enemy.spawn();
+        enemy.move();
+
         (function bonusHandler() {
             const bonus = new Bonus(settings);
             bonus.create(k);
@@ -647,6 +713,7 @@ function SpecialEffect(settings) {
                             k.scale(bonus.scale),
                             k.z(bonus.locationZ),
                             k.pos(numberRandomPositionX, bonus.distanceToGround),
+                            bonusName,
                             {
                                 forename: bonusName,
                             },
@@ -720,6 +787,7 @@ function SpecialEffect(settings) {
                     k.pos(step * groundBlockWidth, settings.scene.size.height - groundBlockWidth),
                     k.area(),
                     k.body({ isStatic: ground.isStatic }),
+                    groundName,
                     {
                         forename: groundName,
                     },
@@ -767,6 +835,7 @@ function SpecialEffect(settings) {
                 }),
                 k.body(player.body),
                 k.health(player.fullHealth),
+                playerName,
                 {
                     forename: playerName,
                     bottlePoison: 0,
@@ -878,7 +947,7 @@ function SpecialEffect(settings) {
 
                     let position = k.vec2(88, 15);
                     if (!player.performer.flipX) position.x = position.x / 2;
-                    se.createStart(k, player.performer.pos.add(position));
+                    if (other.forename !== 'enemy') se.createStart(k, player.performer.pos.add(position));
                 }
             });
 
