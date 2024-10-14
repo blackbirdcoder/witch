@@ -133,17 +133,20 @@ function Ground(k) {
     };
 }
 
-function Background() {
-    this._nickname = 'background';
+function Background(k) {
+    this.tag = 'background';
     this._size = {
         width: 400,
         height: 300,
     };
     this.scale = 2;
 
-    this.create = function (k) {
-        k.loadSprite(this._nickname, `sprites/${this._nickname}.png`);
-        return this._nickname;
+    this.createSprite = function () {
+        k.loadSprite(this.tag, `sprites/${this.tag}.png`);
+    };
+
+    this.create = function () {
+        k.add([k.sprite(this.tag), k.scale(this.scale), k.pos(0, 0)]);
     };
 }
 
@@ -772,9 +775,9 @@ function Enemy(k) {
         })();
 
         (function backgroundHandler() {
-            const background = new Background();
-            const backgroundName = background.create(k);
-            k.add([k.sprite(backgroundName), k.scale(background.scale), k.pos(0, 0)]);
+            const background = new Background(k);
+            background.createSprite();
+            background.create();
         })();
 
         (function ingredientHandler() {
