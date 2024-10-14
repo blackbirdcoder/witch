@@ -500,15 +500,15 @@ function Notifier() {
     };
 }
 
-function Bonus(settings) {
-    this._bonusName = settings.bonusName;
-    this.avatar = null;
-    this.performer = null;
+function Bonus(k, settingsBonusName, settingsBonusSpawnTime) {
+    this.tag = settingsBonusName;
+    this.sprite = null;
+    this.gameObject = null;
     this.numbersRandomPosition = {
         from: 64,
         to: 700,
     };
-    this.spawnTime = settings.bonusSpawnTime;
+    this.spawnTime = settingsBonusSpawnTime;
     this.colliderSetting = {
         position: {
             x: 15,
@@ -524,12 +524,50 @@ function Bonus(settings) {
     this.locationZ = 1;
     this.distanceToGround = 472;
 
-    this.create = function (k) {
-        this.avatar = k.loadSprite(this._bonusName, `sprites/${this._bonusName}.png`);
+    this.createSprite = function () {
+        this.sprite = k.loadSprite(this.tag, `sprites/${this.tag}.png`);
     };
 
-    this.getName = function () {
-        return this._bonusName;
+    this.spawn = function (provideData) {
+        k.wait(this.spawnTime, () => {
+            const numberRandomPositionX = k.randi(this.numbersRandomPosition.from, this.numbersRandomPosition.to + 1);
+            const start = provideData.playerPositionRange.start;
+            const end = provideData.playerPositionRange.end;
+            const max = Math.max(start, end);
+            const min = Math.min(start, end);
+
+            const isRange = min <= numberRandomPositionX && numberRandomPositionX <= max;
+
+            if (!isRange) {
+                this.gameObject = k.add([
+                    k.sprite(this.sprite),
+                    k.area({
+                        shape: new k.Rect(
+                            k.vec2(this.colliderSetting.position.x, this.colliderSetting.position.y),
+                            this.colliderSetting.size.width,
+                            this.colliderSetting.size.height
+                        ),
+                    }),
+                    k.body({ isStatic: this.isStatic }),
+                    k.scale(this.scale),
+                    k.z(this.locationZ),
+                    k.pos(numberRandomPositionX, this.distanceToGround),
+                    this.tag,
+                    {
+                        forename: this.tag,
+                    },
+                ]);
+
+                this.gameObject.onCollide((other) => {
+                    if (other.forename === provideData.playerName) {
+                        k.destroy(this.gameObject);
+                        this.spawn(provideData);
+                    }
+                });
+            } else {
+                this.spawn(provideData);
+            }
+        });
     };
 }
 
@@ -718,56 +756,11 @@ function Enemy(k) {
         enemy.move();
 
         (function bonusHandler() {
-            const bonus = new Bonus(settings);
-            bonus.create(k);
-            const bonusName = bonus.getName();
-            provideData.bonusName = bonusName;
+            const bonus = new Bonus(k, settings.bonusName, settings.bonusSpawnTime);
+            provideData.bonusName = bonus.tag;
             provideData.bonusSpawnTime = bonus.spawnTime;
-
-            (function buildBonus(spawnTime) {
-                k.wait(spawnTime, () => {
-                    const numberRandomPositionX = k.randi(
-                        bonus.numbersRandomPosition.from,
-                        bonus.numbersRandomPosition.to + 1
-                    );
-                    const start = provideData.playerPositionRange.start;
-                    const end = provideData.playerPositionRange.end;
-                    const max = Math.max(start, end);
-                    const min = Math.min(start, end);
-
-                    const isRange = min <= numberRandomPositionX && numberRandomPositionX <= max;
-
-                    if (!isRange) {
-                        bonus.performer = k.add([
-                            k.sprite(bonus.avatar),
-                            k.area({
-                                shape: new k.Rect(
-                                    k.vec2(bonus.colliderSetting.position.x, bonus.colliderSetting.position.y),
-                                    bonus.colliderSetting.size.width,
-                                    bonus.colliderSetting.size.height
-                                ),
-                            }),
-                            k.body({ isStatic: bonus.isStatic }),
-                            k.scale(bonus.scale),
-                            k.z(bonus.locationZ),
-                            k.pos(numberRandomPositionX, bonus.distanceToGround),
-                            bonusName,
-                            {
-                                forename: bonusName,
-                            },
-                        ]);
-
-                        bonus.performer.onCollide((other) => {
-                            if (other.forename === provideData.playerName) {
-                                k.destroy(bonus.performer);
-                                buildBonus(bonus.spawnTime);
-                            }
-                        });
-                    } else {
-                        buildBonus(bonus.spawnTime);
-                    }
-                });
-            })(bonus.spawnTime);
+            bonus.createSprite();
+            bonus.spawn(provideData);
         })();
 
         (function backgroundHandler() {
