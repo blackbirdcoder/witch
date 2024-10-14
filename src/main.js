@@ -33,8 +33,8 @@ const settings = {
     },
 };
 
-function Ingredient(settings) {
-    this._nicknames = settings.ingredientNames;
+function Ingredient(k, settingsIngredientNames) {
+    this.tags = settingsIngredientNames;
     this._collection = [];
     this.size = {
         width: 64,
@@ -50,12 +50,38 @@ function Ingredient(settings) {
         },
     };
     this.damageHero = 10;
+    this.top = 2;
 
-    this.create = function (k) {
-        this._nicknames.forEach((item) => {
+    this.createSprites = function () {
+        this.tags.forEach((item) => {
             this._collection.push(k.loadSprite(item, `sprites/${item}.png`));
         });
-        return this._nicknames;
+    };
+
+    this.spawn = function (settingsFrequencySpawn) {
+        k.loop(settingsFrequencySpawn, () => {
+            const currentIngredientName = this.tags[k.randi(this.tags.length)];
+            const activeIngredient = k.add([
+                k.sprite(currentIngredientName),
+                k.scale(this.scale),
+                k.pos(k.rand(this.size.width, k.width() - this.size.width), -this.size.height * this.top),
+                k.area({
+                    shape: new k.Rect(
+                        k.vec2(this.collider.position.x, this.collider.position.y),
+                        this.collider.size.width,
+                        this.collider.size.height
+                    ),
+                }),
+                k.body({ gravityScale: this.gravityScale }),
+                {
+                    forename: currentIngredientName,
+                },
+            ]);
+
+            activeIngredient.onCollide(() => {
+                activeIngredient.destroy(activeIngredient);
+            });
+        });
     };
 }
 
@@ -752,37 +778,10 @@ function Enemy(k) {
         })();
 
         (function ingredientHandler() {
-            const ingredient = new Ingredient(settings);
-            const ingredientNames = ingredient.create(k);
-            const top = 2;
+            const ingredient = new Ingredient(k, settings.ingredientNames);
             provideData.ingredientDamage = ingredient.damageHero;
-
-            k.loop(settings.scene.frequencySpawn, () => {
-                const currentIngredientName = ingredientNames[k.randi(ingredientNames.length)];
-                const activeIngredient = k.add([
-                    k.sprite(currentIngredientName),
-                    k.scale(ingredient.scale),
-                    k.pos(
-                        k.rand(ingredient.size.width, k.width() - ingredient.size.width),
-                        -ingredient.size.height * top
-                    ),
-                    k.area({
-                        shape: new k.Rect(
-                            k.vec2(ingredient.collider.position.x, ingredient.collider.position.y),
-                            ingredient.collider.size.width,
-                            ingredient.collider.size.height
-                        ),
-                    }),
-                    k.body({ gravityScale: ingredient.gravityScale }),
-                    {
-                        forename: currentIngredientName,
-                    },
-                ]);
-
-                activeIngredient.onCollide((other) => {
-                    k.destroy(activeIngredient);
-                });
-            });
+            ingredient.createSprites();
+            ingredient.spawn(settings.scene.frequencySpawn);
         })();
 
         (function groundHandler() {
