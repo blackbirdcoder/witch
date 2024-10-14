@@ -135,10 +135,6 @@ function Ground(k) {
 
 function Background(k) {
     this.tag = 'background';
-    this._size = {
-        width: 400,
-        height: 300,
-    };
     this.scale = 2;
 
     this.createSprite = function () {
