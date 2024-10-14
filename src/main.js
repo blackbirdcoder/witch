@@ -10,6 +10,7 @@ const settings = {
         hit: [222, 158, 65],
         mask: [255, 255, 255],
         effect: [207, 87, 60],
+        sting: [165, 48, 48],
     },
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
@@ -226,6 +227,7 @@ function Player(k) {
             }),
             k.body(this.body),
             k.health(this.fullHealth),
+            k.color(255, 255, 255),
             this.tag,
             {
                 forename: this.tag,
@@ -650,11 +652,11 @@ function Bonus(k, settingsBonusName, settingsBonusSpawnTime) {
     };
 }
 
-function SpecialEffect(settings) {
+function SpecialEffect(k, settings) {
     this.dustName = 'dust';
     this.starsName = 'star';
 
-    this.createDust = function (k, position, direction) {
+    this.createDust = function (position, direction) {
         k.add([
             k.pos(position),
             k.rect(7, 7),
@@ -670,7 +672,7 @@ function SpecialEffect(settings) {
         ]);
     };
 
-    this.createStart = function (k, position) {
+    this.createStart = function (position) {
         const directions = [k.LEFT, k.UP, k.RIGHT, k.DOWN, k.vec2(1, 1), k.vec2(-1, -1), k.vec2(1, -1), k.vec2(-1, 1)];
         for (let i = 0; i < directions.length; i++) {
             k.add([
@@ -688,6 +690,15 @@ function SpecialEffect(settings) {
                 },
             ]);
         }
+    };
+
+    this.repaint = function (heroGameObject, color) {
+        const oldColor = heroGameObject.color;
+        heroGameObject.color = k.rgb(color);
+
+        heroGameObject.wait(0.08, () => {
+            heroGameObject.color = k.rgb(oldColor);
+        });
     };
 }
 
@@ -805,7 +816,7 @@ function Enemy(k) {
         poisonRecipe.create();
         let recipe = poisonRecipe.getRecipe();
 
-        const specialEffect = new SpecialEffect(settings);
+        const specialEffect = new SpecialEffect(k, settings);
         provideData.dustName = specialEffect.dustName;
         provideData.starName = specialEffect.starsName;
 
@@ -932,8 +943,14 @@ function Enemy(k) {
 
                     let position = k.vec2(88, 15);
                     if (!player.gameObject.flipX) position.x = position.x / 2;
+
                     if (other.forename !== provideData.enemyName) {
-                        se.createStart(k, player.gameObject.pos.add(position));
+                        se.createStart(player.gameObject.pos.add(position));
+                        se.repaint(player.gameObject, settings.color.sting);
+                    }
+
+                    if (other.forename === provideData.enemyName) {
+                        se.repaint(player.gameObject, settings.color.sting);
                     }
                 }
             });
@@ -951,8 +968,8 @@ function Enemy(k) {
                     player.gameObject.area.shape.pos.x = player.turnColliderRelocation.left.parent;
                     player.gameObject.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
                     if (player.gameObject.isGrounded()) {
-                        se.createDust(k, player.gameObject.pos.add(87, k.rand(125, 130)), k.RIGHT);
-                        se.createDust(k, player.gameObject.pos.add(100, k.rand(123, 129)), k.RIGHT);
+                        se.createDust(player.gameObject.pos.add(87, k.rand(125, 130)), k.RIGHT);
+                        se.createDust(player.gameObject.pos.add(100, k.rand(123, 129)), k.RIGHT);
                     }
                 }
             });
@@ -966,8 +983,8 @@ function Enemy(k) {
                     player.gameObject.area.shape.pos.x = player.turnColliderRelocation.right.parent;
                     player.gameObject.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
                     if (player.gameObject.isGrounded()) {
-                        se.createDust(k, player.gameObject.pos.add(31, k.rand(125, 130)), k.LEFT);
-                        se.createDust(k, player.gameObject.pos.add(40, k.rand(123, 129)), k.LEFT);
+                        se.createDust(player.gameObject.pos.add(31, k.rand(125, 130)), k.LEFT);
+                        se.createDust(player.gameObject.pos.add(40, k.rand(123, 129)), k.LEFT);
                     }
                 }
             });
