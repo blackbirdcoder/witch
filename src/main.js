@@ -464,13 +464,13 @@ function UserInterface(settings) {
     };
 }
 
-function Recipe(settings) {
-    this._ingredients = settings.ingredientNames;
+function Recipe(k, settingsIngredientNames, settingsAmountIngredients) {
+    this._ingredients = settingsIngredientNames;
     this._recipe = {};
 
-    this.create = function (k) {
+    this.create = function () {
         for (const ingredient of this._ingredients) {
-            this._recipe[ingredient] = k.randi(settings.amountIngredients.min, settings.amountIngredients.max + 1);
+            this._recipe[ingredient] = k.randi(settingsAmountIngredients.min, settingsAmountIngredients.max + 1);
         }
     };
 
@@ -742,8 +742,8 @@ function Enemy(k) {
         k.setGravity(settings.scene.gravity);
         k.onKeyPress('r', () => k.go('main'));
 
-        const poisonRecipe = new Recipe(settings);
-        poisonRecipe.create(k);
+        const poisonRecipe = new Recipe(k, settings.ingredientNames, settings.amountIngredients);
+        poisonRecipe.create();
         let recipe = poisonRecipe.getRecipe();
 
         const specialEffect = new SpecialEffect(settings);
