@@ -352,7 +352,7 @@ function ScreenStart(k, settings) {
     };
 }
 
-function UserInterface(settings) {
+function UserInterface(k, settings) {
     this._color = settings.color;
     this._fontName = settings.font;
     this.layerIngredientScale = null;
@@ -383,7 +383,7 @@ function UserInterface(settings) {
     this.winner = settings.winnerName;
     this.loser = settings.loserName;
 
-    this.createImageSessionResult = function (k) {
+    this.createImageSessionResult = function () {
         k.loadSprite(this.winner, `sprites/${this.winner}.png`);
         k.loadSprite(this.loser, `sprites/${this.loser}.png`);
     };
@@ -392,19 +392,19 @@ function UserInterface(settings) {
         this.decreaseHealthBar = this.healthBarLength / damage;
     };
 
-    this.createLayerSkull = function (k) {
+    this.createLayerSkull = function () {
         this._layerSkull = k.add([k.fixed(), k.z(this._locationZ)]);
     };
 
-    this.createLayerIngredientScale = function (k) {
+    this.createLayerIngredientScale = function () {
         this.layerIngredientScale = k.add([k.fixed(), k.z(this._locationZ)]);
     };
 
-    this.createLayerBottlePoison = function (k) {
+    this.createLayerBottlePoison = function () {
         this.layerBottlePoison = k.add([k.fixed(), k.z(this._locationZ)]);
     };
 
-    this.displaySkull = function (k, color = this._color.mask) {
+    this.displaySkull = function (color = this._color.mask) {
         this._layerSkull.add([
             k.sprite(this._skullName),
             k.scale(0.8),
@@ -413,7 +413,7 @@ function UserInterface(settings) {
         ]);
     };
 
-    this.drawHealthBarBackground = function (k) {
+    this.drawHealthBarBackground = function () {
         this._healthBarBackground = k.add([
             k.rect(this._healthBarSettings.width, this._healthBarSettings.height),
             k.pos(this._healthBarSettings.position.x, this._healthBarSettings.position.y),
@@ -422,7 +422,7 @@ function UserInterface(settings) {
         ]);
     };
 
-    this.drawHealthBarForeground = function (k, lengthSegment) {
+    this.drawHealthBarForeground = function (lengthSegment) {
         this.healthBarForeground = k.add([
             k.rect(lengthSegment, this._healthBarSettings.height),
             k.pos(this._healthBarSettings.position.x, this._healthBarSettings.position.y),
@@ -431,7 +431,7 @@ function UserInterface(settings) {
         ]);
     };
 
-    this.createIngredientUI = function (k, recipe, ingredient, style) {
+    this.createIngredientUI = function (recipe, ingredient, style) {
         style['size'] = 20;
         style['width'] = 200;
         style['align'] = 'left';
@@ -463,20 +463,20 @@ function UserInterface(settings) {
         }
     };
 
-    this.createSkull = function (k) {
+    this.createSkull = function () {
         k.loadSprite(this._skullName, `sprites/${this._skullName}.png`);
     };
 
-    this.createBottlePoison = function (k) {
+    this.createBottlePoison = function () {
         k.loadSprite(this._bottleName, `sprites/${this._bottleName}.png`);
     };
 
-    this.displayBottlePoisons = function (k, style) {
+    this.displayBottlePoisons = function (style) {
         this.layerBottlePoison.add([k.sprite(this._bottleName), k.scale(0.8), k.pos(k.width() - 64 * 3, 50)]);
         this.layerBottlePoison.add([k.text('[gold]x[/gold]', style), k.pos(k.width() - 150, 70)]);
     };
 
-    this.createCountingBottlePoisons = function (k, bottlePoison, maxBottles, style) {
+    this.createCountingBottlePoisons = function (bottlePoison, maxBottles, style) {
         style['size'] = 30;
         this.bottlesCountText = this.layerBottlePoison.add([
             k.text(`[gold]${bottlePoison}/${maxBottles}[/gold]`, style),
@@ -488,10 +488,10 @@ function UserInterface(settings) {
         return this._layerSkull;
     };
 
-    this.redrawSkull = function (k, color = this._color.mask) {
+    this.redrawSkull = function (color = this._color.mask) {
         k.destroy(this._layerSkull);
-        this.createLayerSkull(k);
-        this.displaySkull(k, color);
+        this.createLayerSkull();
+        this.displaySkull(color);
     };
 }
 
@@ -796,18 +796,18 @@ function Enemy(k) {
         })();
 
         const ui = (function userInterfaceHandler() {
-            const userInterface = new UserInterface(settings);
-            userInterface.createLayerIngredientScale(k);
-            userInterface.createLayerBottlePoison(k);
-            userInterface.createBottlePoison(k);
-            userInterface.createSkull(k);
-            userInterface.createLayerSkull(k);
-            userInterface.displaySkull(k);
-            userInterface.drawHealthBarBackground(k);
+            const userInterface = new UserInterface(k, settings);
+            userInterface.createLayerIngredientScale();
+            userInterface.createLayerBottlePoison();
+            userInterface.createBottlePoison();
+            userInterface.createSkull();
+            userInterface.createLayerSkull();
+            userInterface.displaySkull();
+            userInterface.drawHealthBarBackground();
             const healthBarLength = userInterface.healthBarLength;
-            userInterface.drawHealthBarForeground(k, healthBarLength);
+            userInterface.drawHealthBarForeground(healthBarLength);
             userInterface.calculationHealthBarReduction(provideData.ingredientDamage);
-            userInterface.createImageSessionResult(k);
+            userInterface.createImageSessionResult();
             return userInterface;
         })();
 
@@ -866,10 +866,9 @@ function Enemy(k) {
                 },
             ]);
 
-            ui.createIngredientUI(k, recipe, player.performer.children[0].collectedIngredients, provideData.textStyle);
-            ui.displayBottlePoisons(k, provideData.textStyle);
+            ui.createIngredientUI(recipe, player.performer.children[0].collectedIngredients, provideData.textStyle);
+            ui.displayBottlePoisons(provideData.textStyle);
             ui.createCountingBottlePoisons(
-                k,
                 player.performer.bottlePoison,
                 settings.maxBottles,
                 provideData.textStyle
@@ -887,9 +886,9 @@ function Enemy(k) {
                     );
                     if (state['reboot']) {
                         k.destroy(ui.layerIngredientScale);
-                        ui.createLayerIngredientScale(k);
+                        ui.createLayerIngredientScale();
                         ui.createIngredientUI(
-                            k,
+
                             recipe,
                             player.performer.children[0].collectedIngredients,
                             provideData.textStyle
@@ -898,7 +897,6 @@ function Enemy(k) {
                     if (state['newRecipe']) {
                         k.destroy(ui.bottlesCountText);
                         ui.createCountingBottlePoisons(
-                            k,
                             player.performer.bottlePoison,
                             settings.maxBottles,
                             provideData.textStyle
@@ -908,7 +906,6 @@ function Enemy(k) {
                         k.destroy(ui.layerIngredientScale);
                         ui.createLayerIngredientScale(k);
                         ui.createIngredientUI(
-                            k,
                             recipe,
                             player.performer.children[0].collectedIngredients,
                             provideData.textStyle
@@ -924,12 +921,12 @@ function Enemy(k) {
             player.performer.onCollide((other) => {
                 if (other.forename === provideData.bonusName) {
                     if (player.speed !== player.maxSpeed) {
-                        ui.redrawSkull(k, settings.color.effect);
+                        ui.redrawSkull(settings.color.effect);
                         const NumberDivisor = 2;
                         player.speed = player.maxSpeed;
 
                         player.performer.wait(provideData.bonusSpawnTime / NumberDivisor, () => {
-                            ui.redrawSkull(k);
+                            ui.redrawSkull();
                             player.speed = player.speed / NumberDivisor;
                         });
                     }
@@ -943,7 +940,7 @@ function Enemy(k) {
                 ) {
                     player.performer.hurt(provideData.ingredientDamage);
                     k.destroy(ui.healthBarForeground);
-                    ui.drawHealthBarForeground(k, (ui.healthBarLength -= ui.decreaseHealthBar));
+                    ui.drawHealthBarForeground((ui.healthBarLength -= ui.decreaseHealthBar));
 
                     let position = k.vec2(88, 15);
                     if (!player.performer.flipX) position.x = position.x / 2;
