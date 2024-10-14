@@ -59,8 +59,8 @@ function Ingredient(settings) {
     };
 }
 
-function Ground() {
-    this._nickname = 'ground';
+function Ground(k) {
+    this.tag = 'ground';
     this._span = 0;
     this.size = {
         width: 64,
@@ -69,17 +69,15 @@ function Ground() {
     this.isStatic = true;
     this._locationZ = -10;
 
-    this.create = function (k) {
-        k.loadSprite(this._nickname, `sprites/${this._nickname}.png`);
-        return this._nickname;
+    this.createSprite = function () {
+        k.loadSprite(this.tag, `sprites/${this.tag}.png`);
     };
 
     this.calculateSpan = function (sceneLength) {
         this._span = Math.ceil(sceneLength / this.size.width);
-        return this._span;
     };
 
-    this.helperPlatform = function (k, bgColor, tag) {
+    this.helperPlatform = function (bgColor) {
         k.add([
             k.pos(0, k.height() - this.size.height),
             k.rect(k.width(), this.size.width),
@@ -88,9 +86,24 @@ function Ground() {
             k.body({ isStatic: true }),
             k.z(this._locationZ),
             {
-                forename: tag,
+                forename: this.tag,
             },
         ]);
+    };
+
+    this.create = function (sceneHeight) {
+        for (let step = 0; step < this._span; step++) {
+            k.add([
+                k.sprite(this.tag),
+                k.pos(step * this.size.width, sceneHeight - this.size.width),
+                k.area(),
+                k.body({ isStatic: this.isStatic }),
+                this.tag,
+                {
+                    forename: this.tag,
+                },
+            ]);
+        }
     };
 }
 
@@ -607,7 +620,7 @@ function Enemy(k) {
         background: settings.color.fill,
         // maxFPS: 30,
     });
-    k.debug.inspect = false; // DEBUG!
+    k.debug.inspect = true; // DEBUG!
 
     const provideData = {
         textStyle: null,
@@ -773,26 +786,12 @@ function Enemy(k) {
         })();
 
         (function groundHandler() {
-            const ground = new Ground();
-            const groundName = ground.create(k);
-            const numberGroundBlocks = ground.calculateSpan(settings.scene.size.width);
-            const groundBlockWidth = ground.size.width;
-
-            ground.helperPlatform(k, settings.color.fill, groundName);
-            provideData.ground = groundName;
-
-            for (let step = 0; step < numberGroundBlocks; step++) {
-                k.add([
-                    k.sprite(groundName),
-                    k.pos(step * groundBlockWidth, settings.scene.size.height - groundBlockWidth),
-                    k.area(),
-                    k.body({ isStatic: ground.isStatic }),
-                    groundName,
-                    {
-                        forename: groundName,
-                    },
-                ]);
-            }
+            const ground = new Ground(k);
+            provideData.ground = ground.tag;
+            ground.createSprite();
+            ground.calculateSpan(settings.scene.size.width);
+            ground.helperPlatform(settings.color.fill);
+            ground.create(settings.scene.size.height);
         })();
 
         const ui = (function userInterfaceHandler() {
