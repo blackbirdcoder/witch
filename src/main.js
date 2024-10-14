@@ -146,9 +146,9 @@ function Background(k) {
     };
 }
 
-function Player() {
-    this._nickname = 'hero';
-    this.performer = null;
+function Player(k) {
+    this.tag = 'hero';
+    this.gameObject = null;
     this.scale = 2;
     this.fullHealth = 100;
     this.body = {
@@ -207,9 +207,57 @@ function Player() {
         right: undefined,
     };
 
-    this.create = function (k) {
-        k.loadSprite(this._nickname, `sprites/${this._nickname}.png`, this._cutting);
-        return this._nickname;
+    this.createSprite = function () {
+        k.loadSprite(this.tag, `sprites/${this.tag}.png`, this._cutting);
+    };
+
+    this.create = function () {
+        this.gameObject = k.add([
+            k.sprite(this.tag, { anim: 'idle' }),
+            k.scale(this.scale),
+            k.pos(this._initialPosition.x, this._initialPosition.y),
+            k.timer(),
+            k.area({
+                shape: new k.Rect(
+                    k.vec2(this.colliderPlayer.pos.x, this.colliderPlayer.pos.y),
+                    this.colliderPlayer.size.width,
+                    this.colliderPlayer.size.height
+                ),
+            }),
+            k.body(this.body),
+            k.health(this.fullHealth),
+            this.tag,
+            {
+                forename: this.tag,
+                bottlePoison: 0,
+            },
+        ]);
+    };
+
+    this.addPot = function () {
+        this.gameObject.add([
+            k.pos(0, 0),
+            k.area({
+                shape: new k.Rect(
+                    k.vec2(this.colliderAccessory.pos.x, this.colliderAccessory.pos.y),
+                    this.colliderAccessory.size.width,
+                    this.colliderAccessory.size.height
+                ),
+                offset: k.vec2(this.colliderAccessory.offset.x, 0),
+            }),
+            k.body({ isStatic: true }),
+            {
+                forename: this.accessoryName,
+                collectedIngredients: {
+                    carrot: 0,
+                    beetroot: 0,
+                    acorn: 0,
+                    amanita: 0,
+                    onion: 0,
+                    tooth: 0,
+                },
+            },
+        ]);
     };
 
     this.calculateInitialPosition = function (sceneWidth, sceneHeight) {
@@ -225,7 +273,7 @@ function Player() {
 
     this.makingPotions = function (recipe) {
         const state = { potion: this._potion, reboot: false, newRecipe: false };
-        const collections = this.performer.children[0].collectedIngredients;
+        const collections = this.gameObject.children[0].collectedIngredients;
         let precisionCounter = 0;
         for (const keyRecipe of Object.keys(recipe)) {
             if (collections[keyRecipe] === recipe[keyRecipe]) {
@@ -714,7 +762,7 @@ function Enemy(k) {
         background: settings.color.fill,
         // maxFPS: 30,
     });
-    k.debug.inspect = true; // DEBUG!
+    k.debug.inspect = false; // DEBUG!
 
     const provideData = {
         textStyle: null,
@@ -729,6 +777,7 @@ function Enemy(k) {
         },
         dustName: undefined,
         starName: undefined,
+        enemyName: undefined,
     };
 
     k.scene('start', () => {
@@ -764,140 +813,79 @@ function Enemy(k) {
         enemy.createSprite();
         enemy.spawn();
         enemy.move();
+        provideData.enemyName = enemy.tag;
 
-        (function bonusHandler() {
-            const bonus = new Bonus(k, settings.bonusName, settings.bonusSpawnTime);
-            provideData.bonusName = bonus.tag;
-            provideData.bonusSpawnTime = bonus.spawnTime;
-            bonus.createSprite();
-            bonus.spawn(provideData);
-        })();
+        const bonus = new Bonus(k, settings.bonusName, settings.bonusSpawnTime);
+        provideData.bonusName = bonus.tag;
+        provideData.bonusSpawnTime = bonus.spawnTime;
+        bonus.createSprite();
+        bonus.spawn(provideData);
 
-        (function backgroundHandler() {
-            const background = new Background(k);
-            background.createSprite();
-            background.create();
-        })();
+        const background = new Background(k);
+        background.createSprite();
+        background.create();
 
-        (function ingredientHandler() {
-            const ingredient = new Ingredient(k, settings.ingredientNames);
-            provideData.ingredientDamage = ingredient.damageHero;
-            ingredient.createSprites();
-            ingredient.spawn(settings.scene.frequencySpawn);
-        })();
+        const ingredient = new Ingredient(k, settings.ingredientNames);
+        provideData.ingredientDamage = ingredient.damageHero;
+        ingredient.createSprites();
+        ingredient.spawn(settings.scene.frequencySpawn);
 
-        (function groundHandler() {
-            const ground = new Ground(k);
-            provideData.ground = ground.tag;
-            ground.createSprite();
-            ground.calculateSpan(settings.scene.size.width);
-            ground.helperPlatform(settings.color.fill);
-            ground.create(settings.scene.size.height);
-        })();
+        const ground = new Ground(k);
+        provideData.ground = ground.tag;
+        ground.createSprite();
+        ground.calculateSpan(settings.scene.size.width);
+        ground.helperPlatform(settings.color.fill);
+        ground.create(settings.scene.size.height);
 
-        const ui = (function userInterfaceHandler() {
-            const userInterface = new UserInterface(k, settings);
-            userInterface.createLayerIngredientScale();
-            userInterface.createLayerBottlePoison();
-            userInterface.createBottlePoison();
-            userInterface.createSkull();
-            userInterface.createLayerSkull();
-            userInterface.displaySkull();
-            userInterface.drawHealthBarBackground();
-            const healthBarLength = userInterface.healthBarLength;
-            userInterface.drawHealthBarForeground(healthBarLength);
-            userInterface.calculationHealthBarReduction(provideData.ingredientDamage);
-            userInterface.createImageSessionResult();
-            return userInterface;
-        })();
+        const userInterface = new UserInterface(k, settings);
+        userInterface.createLayerIngredientScale();
+        userInterface.createLayerBottlePoison();
+        userInterface.createBottlePoison();
+        userInterface.createSkull();
+        userInterface.createLayerSkull();
+        userInterface.displaySkull();
+        userInterface.drawHealthBarBackground();
+        const healthBarLength = userInterface.healthBarLength;
+        userInterface.drawHealthBarForeground(healthBarLength);
+        userInterface.calculationHealthBarReduction(provideData.ingredientDamage);
+        userInterface.createImageSessionResult();
 
         (function playerHandler(ui, se) {
-            const player = new Player();
-            const playerName = player.create(k);
+            const player = new Player(k);
+            player.createSprite();
             const playerRestrictMove = player.calculateRestrict(settings.scene.size.width);
-            const playerInitPosition = player.calculateInitialPosition(
-                settings.scene.size.width,
-                settings.scene.size.height
-            );
-            provideData.playerName = playerName;
+            player.calculateInitialPosition(settings.scene.size.width, settings.scene.size.height);
+            provideData.playerName = player.tag;
+            player.create();
+            player.addPot();
 
-            player.performer = k.add([
-                k.sprite(playerName, { anim: 'idle' }),
-                k.scale(player.scale),
-                k.pos(playerInitPosition.x, playerInitPosition.y),
-                k.timer(),
-                k.area({
-                    shape: new k.Rect(
-                        k.vec2(player.colliderPlayer.pos.x, player.colliderPlayer.pos.y),
-                        player.colliderPlayer.size.width,
-                        player.colliderPlayer.size.height
-                    ),
-                }),
-                k.body(player.body),
-                k.health(player.fullHealth),
-                playerName,
-                {
-                    forename: playerName,
-                    bottlePoison: 0,
-                },
-            ]);
-
-            player.performer.add([
-                k.pos(0, 0),
-                k.area({
-                    shape: new k.Rect(
-                        k.vec2(player.colliderAccessory.pos.x, player.colliderAccessory.pos.y),
-                        player.colliderAccessory.size.width,
-                        player.colliderAccessory.size.height
-                    ),
-                    offset: k.vec2(player.colliderAccessory.offset.x, 0),
-                }),
-                k.body({ isStatic: true }),
-                {
-                    forename: player.accessoryName,
-                    collectedIngredients: {
-                        carrot: 0,
-                        beetroot: 0,
-                        acorn: 0,
-                        amanita: 0,
-                        onion: 0,
-                        tooth: 0,
-                    },
-                },
-            ]);
-
-            ui.createIngredientUI(recipe, player.performer.children[0].collectedIngredients, provideData.textStyle);
+            ui.createIngredientUI(recipe, player.gameObject.children[0].collectedIngredients, provideData.textStyle);
             ui.displayBottlePoisons(provideData.textStyle);
-            ui.createCountingBottlePoisons(
-                player.performer.bottlePoison,
-                settings.maxBottles,
-                provideData.textStyle
-            );
+            ui.createCountingBottlePoisons(player.gameObject.bottlePoison, settings.maxBottles, provideData.textStyle);
 
-            player.performer.children[0].onCollide((other) => {
-                if (other.forename !== playerName) {
-                    player.performer.children[0].collectedIngredients[other.forename] += 1;
+            player.gameObject.children[0].onCollide((other) => {
+                if (other.forename !== player.tag) {
+                    player.gameObject.children[0].collectedIngredients[other.forename] += 1;
                     const state = player.makingPotions(recipe);
-                    player.performer.bottlePoison = state.potion;
+                    player.gameObject.bottlePoison = state.potion;
                     ui.refreshIngredientDisplay(
                         other.forename,
-                        player.performer.children[0].collectedIngredients,
+                        player.gameObject.children[0].collectedIngredients,
                         recipe
                     );
                     if (state['reboot']) {
                         k.destroy(ui.layerIngredientScale);
                         ui.createLayerIngredientScale();
                         ui.createIngredientUI(
-
                             recipe,
-                            player.performer.children[0].collectedIngredients,
+                            player.gameObject.children[0].collectedIngredients,
                             provideData.textStyle
                         );
                     }
                     if (state['newRecipe']) {
                         k.destroy(ui.bottlesCountText);
                         ui.createCountingBottlePoisons(
-                            player.performer.bottlePoison,
+                            player.gameObject.bottlePoison,
                             settings.maxBottles,
                             provideData.textStyle
                         );
@@ -907,25 +895,25 @@ function Enemy(k) {
                         ui.createLayerIngredientScale(k);
                         ui.createIngredientUI(
                             recipe,
-                            player.performer.children[0].collectedIngredients,
+                            player.gameObject.children[0].collectedIngredients,
                             provideData.textStyle
                         );
 
-                        if (player.performer.bottlePoison === settings.maxBottles) {
+                        if (player.gameObject.bottlePoison === settings.maxBottles) {
                             k.go('inform', '[gold]You Winner[/gold]', ui.winner);
                         }
                     }
                 }
             });
 
-            player.performer.onCollide((other) => {
+            player.gameObject.onCollide((other) => {
                 if (other.forename === provideData.bonusName) {
                     if (player.speed !== player.maxSpeed) {
                         ui.redrawSkull(settings.color.effect);
                         const NumberDivisor = 2;
                         player.speed = player.maxSpeed;
 
-                        player.performer.wait(provideData.bonusSpawnTime / NumberDivisor, () => {
+                        player.gameObject.wait(provideData.bonusSpawnTime / NumberDivisor, () => {
                             ui.redrawSkull();
                             player.speed = player.speed / NumberDivisor;
                         });
@@ -933,119 +921,121 @@ function Enemy(k) {
                 }
 
                 if (
-                    other.forename != provideData.ground &&
-                    other.forename != provideData.bonusName &&
-                    other.forename != provideData.dustName &&
-                    other.forename != provideData.starName
+                    other.forename !== provideData.ground &&
+                    other.forename !== provideData.bonusName &&
+                    other.forename !== provideData.dustName &&
+                    other.forename !== provideData.starName
                 ) {
-                    player.performer.hurt(provideData.ingredientDamage);
+                    player.gameObject.hurt(provideData.ingredientDamage);
                     k.destroy(ui.healthBarForeground);
                     ui.drawHealthBarForeground((ui.healthBarLength -= ui.decreaseHealthBar));
 
                     let position = k.vec2(88, 15);
-                    if (!player.performer.flipX) position.x = position.x / 2;
-                    if (other.forename !== 'enemy') se.createStart(k, player.performer.pos.add(position));
+                    if (!player.gameObject.flipX) position.x = position.x / 2;
+                    if (other.forename !== provideData.enemyName) {
+                        se.createStart(k, player.gameObject.pos.add(position));
+                    }
                 }
             });
 
-            player.performer.onDeath(() => {
+            player.gameObject.onDeath(() => {
                 k.go('inform', '[accent]Game Over[/accent]', ui.loser);
             });
 
-            player.performer.onKeyDown('left', () => {
-                if (player.performer.pos.x > playerRestrictMove.left) {
-                    provideData.playerPositionRange.start = Math.ceil(player.performer.pos.x) + 100;
-                    provideData.playerPositionRange.end = Math.ceil(player.performer.pos.x) - 100;
-                    player.performer.flipX = true;
-                    player.performer.move(-player.speed, 0);
-                    player.performer.area.shape.pos.x = player.turnColliderRelocation.left.parent;
-                    player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
-                    if (player.performer.isGrounded()) {
-                        se.createDust(k, player.performer.pos.add(87, k.rand(125, 130)), k.RIGHT);
-                        se.createDust(k, player.performer.pos.add(100, k.rand(123, 129)), k.RIGHT);
+            player.gameObject.onKeyDown('left', () => {
+                if (player.gameObject.pos.x > playerRestrictMove.left) {
+                    provideData.playerPositionRange.start = Math.ceil(player.gameObject.pos.x) + 100;
+                    provideData.playerPositionRange.end = Math.ceil(player.gameObject.pos.x) - 100;
+                    player.gameObject.flipX = true;
+                    player.gameObject.move(-player.speed, 0);
+                    player.gameObject.area.shape.pos.x = player.turnColliderRelocation.left.parent;
+                    player.gameObject.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
+                    if (player.gameObject.isGrounded()) {
+                        se.createDust(k, player.gameObject.pos.add(87, k.rand(125, 130)), k.RIGHT);
+                        se.createDust(k, player.gameObject.pos.add(100, k.rand(123, 129)), k.RIGHT);
                     }
                 }
             });
 
-            player.performer.onKeyDown('right', () => {
-                player.performer.flipX = false;
-                if (player.performer.pos.x < playerRestrictMove.right) {
-                    provideData.playerPositionRange.start = Math.ceil(player.performer.pos.x) - 100;
-                    provideData.playerPositionRange.end = Math.ceil(player.performer.pos.x) + 100;
-                    player.performer.move(player.speed, 0);
-                    player.performer.area.shape.pos.x = player.turnColliderRelocation.right.parent;
-                    player.performer.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
-                    if (player.performer.isGrounded()) {
-                        se.createDust(k, player.performer.pos.add(31, k.rand(125, 130)), k.LEFT);
-                        se.createDust(k, player.performer.pos.add(40, k.rand(123, 129)), k.LEFT);
+            player.gameObject.onKeyDown('right', () => {
+                player.gameObject.flipX = false;
+                if (player.gameObject.pos.x < playerRestrictMove.right) {
+                    provideData.playerPositionRange.start = Math.ceil(player.gameObject.pos.x) - 100;
+                    provideData.playerPositionRange.end = Math.ceil(player.gameObject.pos.x) + 100;
+                    player.gameObject.move(player.speed, 0);
+                    player.gameObject.area.shape.pos.x = player.turnColliderRelocation.right.parent;
+                    player.gameObject.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
+                    if (player.gameObject.isGrounded()) {
+                        se.createDust(k, player.gameObject.pos.add(31, k.rand(125, 130)), k.LEFT);
+                        se.createDust(k, player.gameObject.pos.add(40, k.rand(123, 129)), k.LEFT);
                     }
                 }
             });
 
-            player.performer.onKeyPress('space', () => {
-                if (player.performer.isGrounded()) {
-                    player.performer.jump();
+            player.gameObject.onKeyPress('space', () => {
+                if (player.gameObject.isGrounded()) {
+                    player.gameObject.jump();
                 }
             });
 
             ['left', 'right', 'space'].forEach((key) => {
                 if (key == 'space') {
-                    player.performer.onKeyPress(key, () => {
-                        player.performer.play('jump');
+                    player.gameObject.onKeyPress(key, () => {
+                        player.gameObject.play('jump');
                     });
                 } else if (key == 'right') {
-                    player.performer.onKeyPress(key, () => {
-                        player.performer.play('run');
+                    player.gameObject.onKeyPress(key, () => {
+                        player.gameObject.play('run');
 
                         if (player.turnCorrectionStatus[key]) {
-                            player.performer.pos.x = player.performer.pos.x + player.performer.width;
+                            player.gameObject.pos.x = player.gameObject.pos.x + player.gameObject.width;
                             player.turnStatusSwitch();
                         }
                     });
                 } else if (key == 'left') {
-                    player.performer.onKeyPress(key, () => {
-                        player.performer.play('run');
+                    player.gameObject.onKeyPress(key, () => {
+                        player.gameObject.play('run');
 
                         if (player.turnCorrectionStatus[key]) {
-                            player.performer.pos.x = player.performer.pos.x - player.performer.width;
+                            player.gameObject.pos.x = player.gameObject.pos.x - player.gameObject.width;
                             player.turnStatusSwitch();
                         }
                     });
                 }
             });
 
-            player.performer.onKeyRelease(() => {
+            player.gameObject.onKeyRelease(() => {
                 if (!k.isKeyDown('left') && !k.isKeyDown('right') && !k.isKeyDown('space')) {
-                    player.performer.play('idle');
+                    player.gameObject.play('idle');
                 } else if (k.isKeyDown('right') || k.isKeyDown('left')) {
-                    player.performer.play('run');
-                } else if (k.isKeyDown('space') && player.performer.isGrounded()) {
-                    player.performer.play('idle');
+                    player.gameObject.play('run');
+                } else if (k.isKeyDown('space') && player.gameObject.isGrounded()) {
+                    player.gameObject.play('idle');
                 }
             });
 
-            player.performer.onUpdate(() => {
+            player.gameObject.onUpdate(() => {
                 if (
                     (k.isKeyDown('right') &&
                         k.isKeyDown('space') &&
-                        player.performer.isGrounded() &&
-                        player.performer.curAnim() !== 'run') ||
+                        player.gameObject.isGrounded() &&
+                        player.gameObject.curAnim() !== 'run') ||
                     (k.isKeyDown('left') &&
                         k.isKeyDown('space') &&
-                        player.performer.isGrounded() &&
-                        player.performer.curAnim() !== 'run')
+                        player.gameObject.isGrounded() &&
+                        player.gameObject.curAnim() !== 'run')
                 ) {
-                    player.performer.play('run');
+                    player.gameObject.play('run');
                 }
 
                 if (
-                    (player.performer.pos.x > playerRestrictMove.right && player.performer.curAnim() !== 'idle') ||
-                    (player.performer.pos.x < playerRestrictMove.left && player.performer.curAnim() !== 'idle')
+                    (player.gameObject.pos.x > playerRestrictMove.right && player.gameObject.curAnim() !== 'idle') ||
+                    (player.gameObject.pos.x < playerRestrictMove.left && player.gameObject.curAnim() !== 'idle')
                 ) {
-                    player.performer.play('idle');
+                    player.gameObject.play('idle');
                 }
             });
-        })(ui, specialEffect);
+        })(userInterface, specialEffect);
     });
 
     k.scene('inform', (msg, img) => {
