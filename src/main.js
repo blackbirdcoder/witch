@@ -259,7 +259,7 @@ function Player() {
     };
 }
 
-function ScreenStart(settings) {
+function ScreenStart(k, settings) {
     this._pictureTitleSize = {
         width: 350,
         height: 128,
@@ -284,20 +284,19 @@ function ScreenStart(settings) {
         restart: '[gold]Restart[/gold]',
     };
 
-    this.create = function (k) {
+    this.create = function () {
         for (const item of this._picturesNames) {
             k.loadSprite(item, `sprites/${item}.png`);
         }
         return this._picturesNames;
     };
 
-    this.fontCreate = function (k) {
+    this.fontCreate = function () {
         k.loadFont(`${this._fontName}`, `fonts/${this._fontName}.ttf`);
-        return this._fontName;
     };
 
-    this.getColorText = function (k, fontName = null) {
-        this._styleText['font'] = fontName;
+    this.getColorText = function () {
+        this._styleText['font'] = this._fontName;
         this._styleText['styles'] = {
             gold: (idx, ch) => ({
                 color: k.rgb(this._color.gold),
@@ -309,15 +308,47 @@ function ScreenStart(settings) {
         return this._styleText;
     };
 
-    this.calculateTextPosition = function (sceneWidth, sceneHeight) {
-        this._positionalText.x = sceneWidth / 2 - this._styleText['width'] / 2;
-        this._positionalText.y = sceneHeight / 2 - 30;
-        return this._positionalText;
+    this.calculateTextPosition = function () {
+        this._positionalText.x = settings.scene.size.width / 2 - this._styleText['width'] / 2;
+        this._positionalText.y = settings.scene.size.height / 2 - 30;
     };
 
-    this.calculatePicturePosition = function (sceneWidth) {
-        this._positionalPictureTitle.x = (sceneWidth - this._pictureTitleSize.width) / 10;
+    this.calculatePicturePosition = function () {
+        this._positionalPictureTitle.x = (settings.scene.size.width - this._pictureTitleSize.width) / 10;
         return this._positionalPictureTitle;
+    };
+
+    this.banner = function () {
+        k.add([
+            k.sprite(this._picturesNames[0]),
+            k.scale(this.scale),
+            k.pos(this._positionalPictureTitle.x, this._positionalPictureTitle.y),
+        ]);
+    };
+
+    this.textContinue = function (textStyle) {
+        k.add([k.pos(this._positionalText.x, this._positionalText.y), k.text(this.dialog['start'], textStyle)]);
+    };
+
+    this.control = function () {
+        k.add([
+            k.sprite(this._picturesNames[1]),
+            k.pos(
+                this._positionalText.x + this.pictureControlIdent.x,
+                this._positionalText.y + this.pictureControlIdent.y
+            ),
+            k.scale(this.scale * 0.7),
+        ]);
+    };
+
+    this.descriptionControl = function () {
+        for (const key of Object.keys(this.dialog).slice(1)) {
+            k.add([
+                k.pos(this.dialogPosition.position.x, this.dialogPosition.position.y),
+                k.text(this.dialog[key], this.getColorText()),
+            ]);
+            this.dialogPosition.position.y += this.dialogPosition.step;
+        }
     };
 }
 
@@ -701,38 +732,17 @@ function Enemy(k) {
     };
 
     k.scene('start', () => {
-        const start = new ScreenStart(settings);
-        const pictureNames = start.create(k);
-        const fontMain = start.fontCreate(k);
-        const positionalText = start.calculateTextPosition(settings.scene.size.width, settings.scene.size.height);
-        const positionalTitlePicture = start.calculatePicturePosition(settings.scene.size.width);
-        const positionalControlPicture = {
-            x: positionalText.x + start.pictureControlIdent.x,
-            y: positionalText.y + start.pictureControlIdent.y,
-        };
-        const correctionSize = 0.7;
-        const textStyle = start.getColorText(k, fontMain);
+        const start = new ScreenStart(k, settings);
+        start.create();
+        start.fontCreate();
+        start.calculateTextPosition();
+        start.calculatePicturePosition();
+        const textStyle = start.getColorText();
         provideData.textStyle = textStyle;
-
-        k.add([
-            k.sprite(pictureNames[0]),
-            k.scale(start.scale),
-            k.pos(positionalTitlePicture.x, positionalTitlePicture.y),
-        ]);
-        k.add([k.pos(positionalText.x, positionalText.y), k.text(start.dialog['start'], textStyle)]);
-        k.add([
-            k.sprite(pictureNames[1]),
-            k.pos(positionalControlPicture.x, positionalControlPicture.y),
-            k.scale(start.scale * correctionSize),
-        ]);
-
-        for (const key of Object.keys(start.dialog).slice(1)) {
-            k.add([
-                k.pos(start.dialogPosition.position.x, start.dialogPosition.position.y),
-                k.text(start.dialog[key], start.getColorText(k, fontMain)),
-            ]);
-            start.dialogPosition.position.y += start.dialogPosition.step;
-        }
+        start.banner();
+        start.textContinue(textStyle);
+        start.control();
+        start.descriptionControl();
 
         k.onKeyPress('enter', () => k.go('main'));
     });
