@@ -693,11 +693,10 @@ function SpecialEffect(k, settings) {
     };
 
     this.repaint = function (heroGameObject, color) {
-        const oldColor = heroGameObject.color;
         heroGameObject.color = k.rgb(color);
 
         heroGameObject.wait(0.08, () => {
-            heroGameObject.color = k.rgb(oldColor);
+            heroGameObject.color = k.rgb(255, 255, 255);
         });
     };
 }
@@ -947,9 +946,7 @@ function Enemy(k) {
                     if (other.forename !== provideData.enemyName) {
                         se.createStart(player.gameObject.pos.add(position));
                         se.repaint(player.gameObject, settings.color.sting);
-                    }
-
-                    if (other.forename === provideData.enemyName) {
+                    } else {
                         se.repaint(player.gameObject, settings.color.sting);
                     }
                 }
