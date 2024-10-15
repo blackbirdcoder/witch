@@ -8,7 +8,7 @@ const settings = {
         life: [117, 167, 67],
         dust: [87, 114, 119],
         hit: [222, 158, 65],
-        mask: [255, 255, 255],
+        natural: [255, 255, 255],
         effect: [207, 87, 60],
         sting: [165, 48, 48],
     },
@@ -147,7 +147,7 @@ function Background(k) {
     };
 }
 
-function Player(k) {
+function Player(k, settingsColorNatural) {
     this.tag = 'hero';
     this.gameObject = null;
     this.scale = 2;
@@ -227,7 +227,7 @@ function Player(k) {
             }),
             k.body(this.body),
             k.health(this.fullHealth),
-            k.color(255, 255, 255),
+            k.color(settingsColorNatural),
             this.tag,
             {
                 forename: this.tag,
@@ -454,7 +454,7 @@ function UserInterface(k, settings) {
         this.layerBottlePoison = k.add([k.fixed(), k.z(this._locationZ)]);
     };
 
-    this.displaySkull = function (color = this._color.mask) {
+    this.displaySkull = function (color = this._color.natural) {
         this._layerSkull.add([
             k.sprite(this._skullName),
             k.scale(0.8),
@@ -538,7 +538,7 @@ function UserInterface(k, settings) {
         return this._layerSkull;
     };
 
-    this.redrawSkull = function (color = this._color.mask) {
+    this.redrawSkull = function (color = this._color.natural) {
         k.destroy(this._layerSkull);
         this.createLayerSkull();
         this.displaySkull(color);
@@ -692,11 +692,11 @@ function SpecialEffect(k, settings) {
         }
     };
 
-    this.repaint = function (heroGameObject, color) {
-        heroGameObject.color = k.rgb(color);
+    this.repaint = function (heroGameObject, colorDamage, colorNatural) {
+        heroGameObject.color = k.rgb(colorDamage);
 
         heroGameObject.wait(0.08, () => {
-            heroGameObject.color = k.rgb(255, 255, 255);
+            heroGameObject.color = k.rgb(colorNatural);
         });
     };
 }
@@ -861,7 +861,7 @@ function Enemy(k) {
         userInterface.createImageSessionResult();
 
         (function playerHandler(ui, se) {
-            const player = new Player(k);
+            const player = new Player(k, settings.color.natural);
             player.createSprite();
             const playerRestrictMove = player.calculateRestrict(settings.scene.size.width);
             player.calculateInitialPosition(settings.scene.size.width, settings.scene.size.height);
@@ -945,9 +945,9 @@ function Enemy(k) {
 
                     if (other.forename !== provideData.enemyName) {
                         se.createStart(player.gameObject.pos.add(position));
-                        se.repaint(player.gameObject, settings.color.sting);
+                        se.repaint(player.gameObject, settings.color.sting, settings.color.natural);
                     } else {
-                        se.repaint(player.gameObject, settings.color.sting);
+                        se.repaint(player.gameObject, settings.color.sting, settings.color.natural);
                     }
                 }
             });
