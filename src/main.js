@@ -12,6 +12,13 @@ const settings = {
         effect: [207, 87, 60],
         sting: [165, 48, 48],
     },
+    colorSet: [
+        [79, 143, 186],
+        [117, 167, 67],
+        [192, 148, 115],
+        [190, 119, 43],
+        [162, 62, 140],
+    ],
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
     skullName: 'skull',
@@ -20,7 +27,7 @@ const settings = {
     bonusName: 'bonus',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     amountIngredients: { min: 1, max: 2 }, // max 10
-    maxBottles: 1, // max 10
+    maxBottles: 2, // max 10
     bonusSpawnTime: 4, // 60
     scene: {
         size: {
@@ -236,7 +243,7 @@ function Player(k, settingsColorNatural) {
         ]);
     };
 
-    this.addPot = function () {
+    this.addPot = function (ignore) {
         this.gameObject.add([
             k.pos(0, 0),
             k.area({
@@ -246,6 +253,7 @@ function Player(k, settingsColorNatural) {
                     this.colliderAccessory.size.height
                 ),
                 offset: k.vec2(this.colliderAccessory.offset.x, 0),
+                collisionIgnore: ignore,
             }),
             k.body({ isStatic: true }),
             {
@@ -655,6 +663,7 @@ function Bonus(k, settingsBonusName, settingsBonusSpawnTime) {
 function SpecialEffect(k, settings) {
     this.dustName = 'dust';
     this.starsName = 'star';
+    this.particlePotionName = 'vapor';
 
     this.createDust = function (position, direction) {
         k.add([
@@ -692,12 +701,40 @@ function SpecialEffect(k, settings) {
         }
     };
 
-    this.repaint = function (heroGameObject, colorDamage, colorNatural) {
-        heroGameObject.color = k.rgb(colorDamage);
+    this.repaint = function (heroGameObject) {
+        heroGameObject.color = k.rgb(settings.color.sting);
 
         heroGameObject.wait(0.08, () => {
-            heroGameObject.color = k.rgb(colorNatural);
+            heroGameObject.color = k.rgb(settings.color.natural);
         });
+    };
+
+    this.vaporPot = function (
+        position,
+        colors,
+        numberBalls = 3,
+        circleSize = { min: 3, max: 7 },
+        scaleSize = { min: 0.4, max: 0.9 },
+        life = { destroy: 0.1, fading: 0.2 },
+        speed = { min: 150, max: 256 }
+    ) {
+        const posX = position.x;
+        const posY = position.y;
+        for (let i = 0; i < numberBalls; i++) {
+            k.add([
+                k.pos(k.rand(posX, posX + 20), posY),
+                k.circle(k.rand(circleSize.min, circleSize.max)),
+                k.color(colors[k.randi(0, colors.length)]),
+                k.anchor('center'),
+                k.scale(k.rand(scaleSize.min, scaleSize.max)),
+                k.opacity(0.5),
+                k.lifespan(life.destroy, { fade: life.fading }),
+                k.move(k.UP, k.rand(speed.min, speed.max)),
+                {
+                    forename: this.particlePotionName,
+                },
+            ]);
+        }
     };
 }
 
@@ -867,51 +904,58 @@ function Enemy(k) {
             player.calculateInitialPosition(settings.scene.size.width, settings.scene.size.height);
             provideData.playerName = player.tag;
             player.create();
-            player.addPot();
+            player.addPot([provideData.bonusName, provideData.playerName]);
 
             ui.createIngredientUI(recipe, player.gameObject.children[0].collectedIngredients, provideData.textStyle);
             ui.displayBottlePoisons(provideData.textStyle);
             ui.createCountingBottlePoisons(player.gameObject.bottlePoison, settings.maxBottles, provideData.textStyle);
 
             player.gameObject.children[0].onCollide((other) => {
-                if (other.forename !== player.tag) {
-                    player.gameObject.children[0].collectedIngredients[other.forename] += 1;
-                    const state = player.makingPotions(recipe);
-                    player.gameObject.bottlePoison = state.potion;
-                    ui.refreshIngredientDisplay(
-                        other.forename,
-                        player.gameObject.children[0].collectedIngredients,
-                        recipe
-                    );
-                    if (state['reboot']) {
-                        k.destroy(ui.layerIngredientScale);
-                        ui.createLayerIngredientScale();
-                        ui.createIngredientUI(
-                            recipe,
-                            player.gameObject.children[0].collectedIngredients,
-                            provideData.textStyle
-                        );
-                    }
-                    if (state['newRecipe']) {
-                        k.destroy(ui.bottlesCountText);
-                        ui.createCountingBottlePoisons(
-                            player.gameObject.bottlePoison,
-                            settings.maxBottles,
-                            provideData.textStyle
-                        );
-                        poisonRecipe.create(k);
-                        recipe = poisonRecipe.getRecipe();
-                        k.destroy(ui.layerIngredientScale);
-                        ui.createLayerIngredientScale(k);
-                        ui.createIngredientUI(
-                            recipe,
-                            player.gameObject.children[0].collectedIngredients,
-                            provideData.textStyle
-                        );
+                player.gameObject.children[0].collectedIngredients[other.forename] += 1;
+                const state = player.makingPotions(recipe);
+                player.gameObject.bottlePoison = state.potion;
+                ui.refreshIngredientDisplay(other.forename, player.gameObject.children[0].collectedIngredients, recipe);
+                const dir = player.gameObject.flipX ? k.vec2(40, 65) : k.vec2(75, 65);
+                se.vaporPot(player.gameObject.pos.add(dir), [settings.color.life]);
 
-                        if (player.gameObject.bottlePoison === settings.maxBottles) {
-                            k.go('inform', '[gold]You Winner[/gold]', ui.winner);
-                        }
+                if (state['reboot']) {
+                    k.destroy(ui.layerIngredientScale);
+                    ui.createLayerIngredientScale();
+                    ui.createIngredientUI(
+                        recipe,
+                        player.gameObject.children[0].collectedIngredients,
+                        provideData.textStyle
+                    );
+                }
+
+                if (state['newRecipe']) {
+                    k.destroy(ui.bottlesCountText);
+                    ui.createCountingBottlePoisons(
+                        player.gameObject.bottlePoison,
+                        settings.maxBottles,
+                        provideData.textStyle
+                    );
+                    poisonRecipe.create(k);
+                    recipe = poisonRecipe.getRecipe();
+                    k.destroy(ui.layerIngredientScale);
+                    ui.createLayerIngredientScale(k);
+                    ui.createIngredientUI(
+                        recipe,
+                        player.gameObject.children[0].collectedIngredients,
+                        provideData.textStyle
+                    );
+                    se.vaporPot(
+                        player.gameObject.pos.add(dir),
+                        settings.colorSet,
+                        20,
+                        { min: 10, max: 15 },
+                        { min: 0.6, max: 0.9 },
+                        { destroy: 0.8, fading: 0.6 },
+                        { min: 150, max: 365 }
+                    );
+
+                    if (player.gameObject.bottlePoison === settings.maxBottles) {
+                        k.go('inform', '[gold]You Winner[/gold]', ui.winner);
                     }
                 }
             });
@@ -945,9 +989,9 @@ function Enemy(k) {
 
                     if (other.forename !== provideData.enemyName) {
                         se.createStart(player.gameObject.pos.add(position));
-                        se.repaint(player.gameObject, settings.color.sting, settings.color.natural);
+                        se.repaint(player.gameObject);
                     } else {
-                        se.repaint(player.gameObject, settings.color.sting, settings.color.natural);
+                        se.repaint(player.gameObject);
                     }
                 }
             });
