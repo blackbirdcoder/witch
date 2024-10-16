@@ -12,12 +12,17 @@ const settings = {
         effect: [207, 87, 60],
         sting: [165, 48, 48],
     },
-    colorSet: [
+    colorLuck: [
         [79, 143, 186],
         [117, 167, 67],
         [192, 148, 115],
         [190, 119, 43],
         [162, 62, 140],
+    ],
+    colorFailure: [
+        [168, 181, 178],
+        [199, 207, 204],
+        [21, 29, 40],
     ],
     font: 'PixelifySans-Regular',
     bottleName: 'bottle',
@@ -916,7 +921,6 @@ function Enemy(k) {
                 player.gameObject.bottlePoison = state.potion;
                 ui.refreshIngredientDisplay(other.forename, player.gameObject.children[0].collectedIngredients, recipe);
                 const dir = player.gameObject.flipX ? k.vec2(40, 65) : k.vec2(75, 65);
-                se.vaporPot(player.gameObject.pos.add(dir), [settings.color.life]);
 
                 if (state['reboot']) {
                     k.destroy(ui.layerIngredientScale);
@@ -926,9 +930,16 @@ function Enemy(k) {
                         player.gameObject.children[0].collectedIngredients,
                         provideData.textStyle
                     );
-                }
-
-                if (state['newRecipe']) {
+                    se.vaporPot(
+                        player.gameObject.pos.add(dir),
+                        settings.colorFailure,
+                        25,
+                        { min: 5, max: 11 },
+                        { min: 0.5, max: 0.8 },
+                        { destroy: 0.3, fading: 0.2 },
+                        { min: 150, max: 260 }
+                    );
+                } else if (state['newRecipe']) {
                     k.destroy(ui.bottlesCountText);
                     ui.createCountingBottlePoisons(
                         player.gameObject.bottlePoison,
@@ -946,7 +957,7 @@ function Enemy(k) {
                     );
                     se.vaporPot(
                         player.gameObject.pos.add(dir),
-                        settings.colorSet,
+                        settings.colorLuck,
                         20,
                         { min: 10, max: 15 },
                         { min: 0.6, max: 0.9 },
@@ -957,6 +968,8 @@ function Enemy(k) {
                     if (player.gameObject.bottlePoison === settings.maxBottles) {
                         k.go('inform', '[gold]You Winner[/gold]', ui.winner);
                     }
+                } else {
+                    se.vaporPot(player.gameObject.pos.add(dir), [settings.color.life]);
                 }
             });
 
