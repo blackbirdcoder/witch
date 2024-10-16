@@ -668,7 +668,7 @@ function Bonus(k, settingsBonusName, settingsBonusSpawnTime) {
 function SpecialEffect(k, settings) {
     this.dustName = 'dust';
     this.starsName = 'star';
-    this.particlePotionName = 'vapor';
+    this.vaporName = 'vapor';
 
     this.createDust = function (position, direction) {
         k.add([
@@ -729,14 +729,14 @@ function SpecialEffect(k, settings) {
             k.add([
                 k.pos(k.rand(posX, posX + 20), posY),
                 k.circle(k.rand(circleSize.min, circleSize.max)),
-                k.color(colors[k.randi(0, colors.length)]),
+                k.color(k.choose(colors)),
                 k.anchor('center'),
                 k.scale(k.rand(scaleSize.min, scaleSize.max)),
                 k.opacity(0.5),
                 k.lifespan(life.destroy, { fade: life.fading }),
                 k.move(k.UP, k.rand(speed.min, speed.max)),
                 {
-                    forename: this.particlePotionName,
+                    forename: this.vaporName,
                 },
             ]);
         }
