@@ -813,25 +813,17 @@ function AudioEffect(zzfx) {
 
 function Music(k) {
     this.bgTag = 'bgmusic';
-    this.bgMelodyData = null;
-    this.bgMelody = null;
     this.winTag = 'winner';
     this.loserTag = 'loser';
-
-    this.createBackgroundMelody = function () {
-        this.bgMelodyData = k.loadSound(this.bgTag, `music/${this.bgTag}.ogg`);
-    };
-
-    this.playBackgroundMelody = function () {
-        this.bgMelody = k.play(this.bgMelodyData, { loop: true });
-    };
+    this.melodyData = null;
+    this.melody = null;
 
     this.createMelody = function (tagName) {
-        return k.loadSound(tagName, `music/${tagName}.ogg`);
+        this.melodyData = k.loadSound(tagName, `music/${tagName}.ogg`);
     };
 
-    this.playMelody = function (melodyData) {
-        return k.play(melodyData, { loop: false });
+    this.playMelody = function (melodyData, loop) {
+        this.melody = k.play(melodyData, { loop: loop });
     };
 }
 
@@ -884,13 +876,13 @@ function Music(k) {
 
     k.scene('main', () => {
         const music = new Music(k);
-        music.createBackgroundMelody();
-        music.playBackgroundMelody();
+        music.createMelody(music.bgTag);
+        music.playMelody(music.melodyData, true);
 
         k.setGravity(settings.scene.gravity);
         k.onKeyPress('r', () => {
             k.go('main');
-            music.bgMelody.stop();
+            music.melody.stop();
         });
 
         const audioEffect = new AudioEffect(zzfx);
@@ -1009,7 +1001,7 @@ function Music(k) {
                     );
 
                     if (player.gameObject.bottlePoison === settings.maxBottles) {
-                        mc.bgMelody.stop();
+                        mc.melody.stop();
                         k.go('inform', '[gold]You Winner[/gold]', ui.winner, mc, mc.winTag);
                     }
                 } else {
@@ -1054,7 +1046,7 @@ function Music(k) {
             });
 
             player.gameObject.onDeath(() => {
-                mc.bgMelody.stop();
+                mc.melody.stop();
                 k.go('inform', '[accent]Game Over[/accent]', ui.loser, mc, mc.loserTag);
             });
 
@@ -1155,10 +1147,10 @@ function Music(k) {
     });
 
     k.scene('inform', (msg, img, mc, tg) => {
-        const currentMelodyData = mc.createMelody(tg);
-        const currentMelody = mc.playMelody(currentMelodyData);
+        mc.createMelody(tg);
+        mc.playMelody(mc.melodyData, false);
         k.onKeyPress('r', () => {
-            currentMelody.stop();
+            mc.melody.stop();
             k.go('main');
         });
         const notifier = new Notifier();
