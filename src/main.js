@@ -815,6 +815,8 @@ function Music(k) {
     this.bgTag = 'bgmusic';
     this.bgMelodyData = null;
     this.bgMelody = null;
+    this.winTag = 'winner';
+    this.loserTag = 'loser';
 
     this.createBackgroundMelody = function () {
         this.bgMelodyData = k.loadSound(this.bgTag, `music/${this.bgTag}.ogg`);
@@ -822,6 +824,14 @@ function Music(k) {
 
     this.playBackgroundMelody = function () {
         this.bgMelody = k.play(this.bgMelodyData, { loop: true });
+    };
+
+    this.createMelody = function (tagName) {
+        return k.loadSound(tagName, `music/${tagName}.ogg`);
+    };
+
+    this.playMelody = function (melodyData) {
+        return k.play(melodyData, { loop: false });
     };
 }
 
@@ -1000,7 +1010,7 @@ function Music(k) {
 
                     if (player.gameObject.bottlePoison === settings.maxBottles) {
                         mc.bgMelody.stop();
-                        k.go('inform', '[gold]You Winner[/gold]', ui.winner);
+                        k.go('inform', '[gold]You Winner[/gold]', ui.winner, mc, mc.winTag);
                     }
                 } else {
                     se.vaporPot(player.gameObject.pos.add(dir), [settings.color.life]);
@@ -1045,7 +1055,7 @@ function Music(k) {
 
             player.gameObject.onDeath(() => {
                 mc.bgMelody.stop();
-                k.go('inform', '[accent]Game Over[/accent]', ui.loser);
+                k.go('inform', '[accent]Game Over[/accent]', ui.loser, mc, mc.loserTag);
             });
 
             player.gameObject.onKeyDown('left', () => {
@@ -1144,8 +1154,13 @@ function Music(k) {
         })(userInterface, specialEffect, audioEffect, music);
     });
 
-    k.scene('inform', (msg, img) => {
-        k.onKeyPress('r', () => k.go('main'));
+    k.scene('inform', (msg, img, mc, tg) => {
+        const currentMelodyData = mc.createMelody(tg);
+        const currentMelody = mc.playMelody(currentMelodyData);
+        k.onKeyPress('r', () => {
+            currentMelody.stop();
+            k.go('main');
+        });
         const notifier = new Notifier();
         notifier.displayText(k, msg, provideData.textStyle);
         notifier.displayImage(k, img);
