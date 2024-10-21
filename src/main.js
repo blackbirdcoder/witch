@@ -1,4 +1,5 @@
 import kaboom from 'kaboom';
+import { zzfx } from '../www/libs/zzfx.micro.js';
 
 const settings = {
     color: {
@@ -32,7 +33,7 @@ const settings = {
     bonusName: 'bonus',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     amountIngredients: { min: 1, max: 2 }, // max 10
-    maxBottles: 2, // max 10
+    maxBottles: 1, // max 10
     bonusSpawnTime: 4, // 60
     scene: {
         size: {
@@ -804,6 +805,26 @@ function Enemy(k) {
     };
 }
 
+function AudioEffect(zzfx) {
+    this.playSound = function (sound) {
+        zzfx(...sound);
+    };
+}
+
+function Music(k) {
+    this.bgTag = 'bgmusic';
+    this.bgMelodyData = null;
+    this.bgMelody = null;
+
+    this.createBackgroundMelody = function () {
+        this.bgMelodyData = k.loadSound(this.bgTag, `music/${this.bgTag}.ogg`);
+    };
+
+    this.playBackgroundMelody = function () {
+        this.bgMelody = k.play(this.bgMelodyData, { loop: true });
+    };
+}
+
 (function main() {
     const k = kaboom({
         width: settings.scene.size.width,
@@ -845,13 +866,24 @@ function Enemy(k) {
         start.control();
         start.descriptionControl();
 
-        k.onKeyPress('enter', () => k.go('main'));
+        k.onKeyPress('enter', () => {
+            k.go('main');
+        });
     });
     k.go('start');
 
     k.scene('main', () => {
+        const music = new Music(k);
+        music.createBackgroundMelody();
+        music.playBackgroundMelody();
+
         k.setGravity(settings.scene.gravity);
-        k.onKeyPress('r', () => k.go('main'));
+        k.onKeyPress('r', () => {
+            k.go('main');
+            music.bgMelody.stop();
+        });
+
+        const audioEffect = new AudioEffect(zzfx);
 
         const poisonRecipe = new Recipe(k, settings.ingredientNames, settings.amountIngredients);
         poisonRecipe.create();
@@ -902,7 +934,7 @@ function Enemy(k) {
         userInterface.calculationHealthBarReduction(provideData.ingredientDamage);
         userInterface.createImageSessionResult();
 
-        (function playerHandler(ui, se) {
+        (function playerHandler(ui, se, ae, mc) {
             const player = new Player(k, settings.color.natural);
             player.createSprite();
             const playerRestrictMove = player.calculateRestrict(settings.scene.size.width);
@@ -921,6 +953,7 @@ function Enemy(k) {
                 player.gameObject.bottlePoison = state.potion;
                 ui.refreshIngredientDisplay(other.forename, player.gameObject.children[0].collectedIngredients, recipe);
                 const dir = player.gameObject.flipX ? k.vec2(40, 65) : k.vec2(75, 65);
+                ae.playSound([1.2, 0, 344, 0.03, 0.02, 0.19, 1, 2, 1, 54, 482, 0.06, , , , , , 0.85, 0.01, , 558]); // hit ingredient
 
                 if (state['reboot']) {
                     k.destroy(ui.layerIngredientScale);
@@ -966,6 +999,7 @@ function Enemy(k) {
                     );
 
                     if (player.gameObject.bottlePoison === settings.maxBottles) {
+                        mc.bgMelody.stop();
                         k.go('inform', '[gold]You Winner[/gold]', ui.winner);
                     }
                 } else {
@@ -1010,6 +1044,7 @@ function Enemy(k) {
             });
 
             player.gameObject.onDeath(() => {
+                mc.bgMelody.stop();
                 k.go('inform', '[accent]Game Over[/accent]', ui.loser);
             });
 
@@ -1106,7 +1141,7 @@ function Enemy(k) {
                     player.gameObject.play('idle');
                 }
             });
-        })(userInterface, specialEffect);
+        })(userInterface, specialEffect, audioEffect, music);
     });
 
     k.scene('inform', (msg, img) => {
