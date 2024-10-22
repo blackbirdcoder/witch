@@ -812,14 +812,17 @@ function AudioEffect(zzfx) {
 }
 
 function Music(k) {
-    this.bgTag = 'bgmusic';
-    this.winTag = 'winner';
-    this.loserTag = 'loser';
-    this.melodyData = null;
     this.melody = null;
+    this.melodiesData = {
+        bgmusic: null,
+        winner: null,
+        loser: null,
+    };
 
-    this.createMelody = function (tagName) {
-        this.melodyData = k.loadSound(tagName, `music/${tagName}.ogg`);
+    this.createMelodies = function () {
+        for (key of Object.keys(this.melodiesData)) {
+            this.melodiesData[key] = k.loadSound(key, `music/${key}.ogg`);
+        }
     };
 
     this.playMelody = function (melodyData, loop) {
@@ -855,6 +858,9 @@ function Music(k) {
         enemyName: undefined,
     };
 
+    const music = new Music(k);
+    music.createMelodies();
+
     k.scene('start', () => {
         const start = new ScreenStart(k, settings);
         start.create();
@@ -875,9 +881,7 @@ function Music(k) {
     k.go('start');
 
     k.scene('main', () => {
-        const music = new Music(k);
-        music.createMelody(music.bgTag);
-        music.playMelody(music.melodyData, true);
+        music.playMelody(music.melodiesData.bgmusic, true);
 
         k.setGravity(settings.scene.gravity);
         k.onKeyPress('r', () => {
@@ -1002,7 +1006,7 @@ function Music(k) {
 
                     if (player.gameObject.bottlePoison === settings.maxBottles) {
                         mc.melody.stop();
-                        k.go('inform', '[gold]You Winner[/gold]', ui.winner, mc, mc.winTag);
+                        k.go('inform', '[gold]You Winner[/gold]', ui.winner, mc, 'winner');
                     }
                 } else {
                     se.vaporPot(player.gameObject.pos.add(dir), [settings.color.life]);
@@ -1047,7 +1051,7 @@ function Music(k) {
 
             player.gameObject.onDeath(() => {
                 mc.melody.stop();
-                k.go('inform', '[accent]Game Over[/accent]', ui.loser, mc, mc.loserTag);
+                k.go('inform', '[accent]Game Over[/accent]', ui.loser, mc, 'loser');
             });
 
             player.gameObject.onKeyDown('left', () => {
@@ -1147,8 +1151,7 @@ function Music(k) {
     });
 
     k.scene('inform', (msg, img, mc, tg) => {
-        mc.createMelody(tg);
-        mc.playMelody(mc.melodyData, false);
+        mc.playMelody(mc.melodiesData[tg], false);
         k.onKeyPress('r', () => {
             mc.melody.stop();
             k.go('main');
