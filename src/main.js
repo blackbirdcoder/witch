@@ -32,9 +32,9 @@ const settings = {
     loserName: 'loser',
     bonusName: 'bonus',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
-    amountIngredients: { min: 1, max: 2 }, // max 10
-    maxBottles: 2, // max 10
-    bonusSpawnTime: 60, // 60
+    amountIngredients: { min: 1, max: 10 },
+    maxBottles: 10,
+    bonusSpawnTime: 60,
     scene: {
         size: {
             width: 800,
