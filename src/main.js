@@ -33,8 +33,8 @@ const settings = {
     bonusName: 'bonus',
     ingredientNames: ['carrot', 'beetroot', 'acorn', 'amanita', 'onion', 'tooth'],
     amountIngredients: { min: 1, max: 2 }, // max 10
-    maxBottles: 1, // max 10
-    bonusSpawnTime: 4, // 60
+    maxBottles: 2, // max 10
+    bonusSpawnTime: 60, // 60
     scene: {
         size: {
             width: 800,
@@ -44,6 +44,13 @@ const settings = {
         scale: 1,
         frequencySpawn: 2,
         gravity: 1600,
+    },
+    shortSounds: {
+        pot: [4.2, 0, 55, 0.02, 0.01, 0.16, 1, 1.9, 17, 28, , , , , , 0.1, , 0.63, 0.01, , -300],
+        vapor: [, 0, 100, 0.12, 0.1, , 4, 0.3, 6, , 250, -0.05, 0.03, 0.3, , , 0.12, 0.5, , 0.02],
+        done: [0.8, 0, 100, 0.9, 0.26, 0.22, 1, , , , 233, 0.06, 0.08, 1, , , 1, 0.68, , , 242],
+        damage: [0.5, 0, 100, , 0.06, 0.26, 2, 1.6, , , , , , , , , , 0.87, 0.07],
+        bonus: [, 0, 200, 0.5, 0.25, 0.35, , 10, -1, -42, 11, , 0.3, , , , 1, 0.52, 0.3, , 155],
     },
 };
 
@@ -959,7 +966,6 @@ function Music(k) {
                 player.gameObject.bottlePoison = state.potion;
                 ui.refreshIngredientDisplay(other.forename, player.gameObject.children[0].collectedIngredients, recipe);
                 const dir = player.gameObject.flipX ? k.vec2(40, 65) : k.vec2(75, 65);
-                ae.playSound([1.2, 0, 344, 0.03, 0.02, 0.19, 1, 2, 1, 54, 482, 0.06, , , , , , 0.85, 0.01, , 558]); // hit ingredient
 
                 if (state['reboot']) {
                     k.destroy(ui.layerIngredientScale);
@@ -978,6 +984,7 @@ function Music(k) {
                         { destroy: 0.3, fading: 0.2 },
                         { min: 150, max: 260 }
                     );
+                    ae.playSound(settings.shortSounds.vapor);
                 } else if (state['newRecipe']) {
                     k.destroy(ui.bottlesCountText);
                     ui.createCountingBottlePoisons(
@@ -1007,9 +1014,12 @@ function Music(k) {
                     if (player.gameObject.bottlePoison === settings.maxBottles) {
                         mc.melody.stop();
                         k.go('inform', '[gold]You Winner[/gold]', ui.winner, mc, 'winner');
+                    } else {
+                        ae.playSound(settings.shortSounds.done);
                     }
                 } else {
                     se.vaporPot(player.gameObject.pos.add(dir), [settings.color.life]);
+                    ae.playSound(settings.shortSounds.pot);
                 }
             });
 
@@ -1017,6 +1027,7 @@ function Music(k) {
                 if (other.forename === provideData.bonusName) {
                     if (player.speed !== player.maxSpeed) {
                         ui.redrawSkull(settings.color.effect);
+                        ae.playSound(settings.shortSounds.bonus);
                         const NumberDivisor = 2;
                         player.speed = player.maxSpeed;
 
@@ -1036,6 +1047,7 @@ function Music(k) {
                     player.gameObject.hurt(provideData.ingredientDamage);
                     k.destroy(ui.healthBarForeground);
                     ui.drawHealthBarForeground((ui.healthBarLength -= ui.decreaseHealthBar));
+                    if (ui.healthBarLength > 0) ae.playSound(settings.shortSounds.damage);
 
                     let position = k.vec2(88, 15);
                     if (!player.gameObject.flipX) position.x = position.x / 2;
