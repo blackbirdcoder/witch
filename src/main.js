@@ -1074,7 +1074,7 @@ function Music(k) {
                     player.gameObject.move(-player.speed, 0);
                     player.gameObject.area.shape.pos.x = player.turnColliderRelocation.left.parent;
                     player.gameObject.children[0].area.shape.pos.x = player.turnColliderRelocation.left.child;
-                    if (player.gameObject.isGrounded()) {
+                    if (player.gameObject.isGrounded() && !k.isKeyDown('right')) {
                         se.createDust(player.gameObject.pos.add(87, k.rand(125, 130)), k.RIGHT);
                         se.createDust(player.gameObject.pos.add(100, k.rand(123, 129)), k.RIGHT);
                     }
@@ -1089,7 +1089,7 @@ function Music(k) {
                     player.gameObject.move(player.speed, 0);
                     player.gameObject.area.shape.pos.x = player.turnColliderRelocation.right.parent;
                     player.gameObject.children[0].area.shape.pos.x = player.turnColliderRelocation.right.child;
-                    if (player.gameObject.isGrounded()) {
+                    if (player.gameObject.isGrounded() && !k.isKeyDown('left')) {
                         se.createDust(player.gameObject.pos.add(31, k.rand(125, 130)), k.LEFT);
                         se.createDust(player.gameObject.pos.add(40, k.rand(123, 129)), k.LEFT);
                     }
@@ -1156,6 +1156,10 @@ function Music(k) {
                     (player.gameObject.pos.x > playerRestrictMove.right && player.gameObject.curAnim() !== 'idle') ||
                     (player.gameObject.pos.x < playerRestrictMove.left && player.gameObject.curAnim() !== 'idle')
                 ) {
+                    player.gameObject.play('idle');
+                }
+
+                if (k.isKeyDown('right') && k.isKeyDown('left') && player.gameObject.curAnim() !== 'idle') {
                     player.gameObject.play('idle');
                 }
             });
