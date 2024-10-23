@@ -1,6 +1,7 @@
 # Casual game Witch
 
 Dear friends, immerse yourselves in the world of a witch, gather ingredients, and brew potions. This is a simple, lighthearted game I created for fun and to explore the Kaboom.js library. Enjoy playing and sharpen your focus as you go!
+[PLAY](https://blackbird-dev.itch.io/witch)
 
 ![Witch](screenshot/ss-witch-game.png)
 
@@ -16,7 +17,11 @@ Development
 $ npm run dev
 ```
 
-will start a dev server at http://localhost:8000
+will start a dev server at
+
+```
+http://localhost:8000
+```
 
 Distribution
 
